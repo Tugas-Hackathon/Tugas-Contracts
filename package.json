@@ -1,0 +1,18 @@
+{
+  "name": "tugas-contracts",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy:testnet": "hardhat run scripts/deploy.ts --network testnet",
+    "deploy:mainnet": "hardhat run scripts/deploy.ts --network mainnet"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox-viem": "^5.0.7",
+    "@types/node": "^26.5.1",
+    "dotenv": "^17.4.2",
+    "hardhat": "^3.16.0",
+    "typescript": "^5.9.3"
+  }
+}

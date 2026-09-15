@@ -1,0 +1,16 @@
+{
+  "mainnet": {
+    "chainId": 677,
+    "name": "BOT Chain Mainnet",
+    "rpc": "https://rpc.botchain.ai",
+    "explorer": "https://scan.botchain.ai",
+    "symbol": "BOT"
+  },
+  "testnet": {
+    "chainId": 968,
+    "name": "BOT Chain Testnet",
+    "rpc": "https://rpc.bohr.life",
+    "explorer": "https://scan.bohr.life",
+    "symbol": "tBOT"
+  }
+}
