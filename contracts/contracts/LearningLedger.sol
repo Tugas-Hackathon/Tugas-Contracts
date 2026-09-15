@@ -38,6 +38,17 @@ contract LearningLedger {
         emit MilestoneCommitted(msg.sender, id, workHash, contextHash, aiAssistLevel, uint64(block.timestamp));
     }
 
+
+    function endorse(uint256 id) external {
+        require(id < commits.length, "no commit");
+        Commit storage c = commits[id];
+        require(c.student != msg.sender, "self");
+        require(!endorsed[id][msg.sender], "already");
+        endorsed[id][msg.sender] = true;
+        c.endorsements += 1;
+        emit Endorsed(id, msg.sender);
+    }
+
     function getCommit(uint256 id) external view returns (Commit memory) {
         require(id < commits.length, "no commit");
         return commits[id];
