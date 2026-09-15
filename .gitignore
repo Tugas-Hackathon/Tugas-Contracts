@@ -1,0 +1,11 @@
+.env
+*/.env
+node_modules/
+.venv/
+__pycache__/
+backend/data/
+contracts/artifacts/
+contracts/cache/
+contracts/typechain-types/
+frontend/dist/
+bot/.wwebjs_auth/
