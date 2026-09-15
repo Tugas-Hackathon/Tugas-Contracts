@@ -45,3 +45,40 @@ describe("LearningLedger.commit", () => {
     await viem.assertions.revertWith(ledger.write.commit([zeroHash, CTX, 10]), "zero hash");
   });
 });
+
+describe("LearningLedger.endorse", () => {
+  it("lets a different wallet endorse once and emits Endorsed", async () => {
+    const { ledger, teammate } = await deploy();
+    await ledger.write.commit([WORK, CTX, 30]);
+    await viem.assertions.emitWithArgs(
+      ledger.write.endorse([0n], { account: teammate.account }),
+      ledger,
+      "Endorsed",
+      [0n, teammate.account.address],
+    );
+    const c = await ledger.read.getCommit([0n]);
+    assert.equal(c.endorsements, 1);
+    assert.equal(await ledger.read.endorsed([0n, teammate.account.address]), true);
+  });
+
+  it("reverts on self-endorse", async () => {
+    const { ledger } = await deploy();
+    await ledger.write.commit([WORK, CTX, 30]);
+    await viem.assertions.revertWith(ledger.write.endorse([0n]), "self");
+  });
+
+  it("reverts on double endorse", async () => {
+    const { ledger, teammate } = await deploy();
+    await ledger.write.commit([WORK, CTX, 30]);
+    await ledger.write.endorse([0n], { account: teammate.account });
+    await viem.assertions.revertWith(
+      ledger.write.endorse([0n], { account: teammate.account }),
+      "already",
+    );
+  });
+
+  it("reverts on unknown id", async () => {
+    const { ledger, teammate } = await deploy();
+    await viem.assertions.revertWith(ledger.write.endorse([7n], { account: teammate.account }), "no commit");
+  });
+});
