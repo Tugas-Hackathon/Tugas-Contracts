@@ -18,11 +18,10 @@ TASK_MODELS: dict[str, list[str]] = {
 }
 
 _FIXTURES_DIR = Path(__file__).parent / "tests" / "fixtures" / "llm"
-_USE_FIXTURES = os.getenv("LLM_FIXTURES") == "1"
-
 _client = OpenAI(
     api_key=os.getenv("OPENROUTER_API_KEY", ""),
     base_url="https://openrouter.ai/api/v1",
+    max_retries=2,
 )
 
 
@@ -38,7 +37,7 @@ def _model_for(task: str) -> str:
 
 
 def chat(task: str, messages: list[dict]) -> str:
-    if _USE_FIXTURES:
+    if os.getenv("LLM_FIXTURES") == "1":
         fixture = _FIXTURES_DIR / f"{task}.txt"
         if fixture.exists():
             return fixture.read_text()
@@ -49,7 +48,6 @@ def chat(task: str, messages: list[dict]) -> str:
         model=model,
         messages=messages,
         timeout=60,
-        max_retries=2,
     )
     content = resp.choices[0].message.content if resp.choices else None
     if not content:
@@ -58,7 +56,7 @@ def chat(task: str, messages: list[dict]) -> str:
 
 
 def parse(task: str, prompt: str, schema: type[T]) -> T:
-    if _USE_FIXTURES:
+    if os.getenv("LLM_FIXTURES") == "1":
         fixture = _FIXTURES_DIR / f"{task}.json"
         if fixture.exists():
             return schema.model_validate_json(fixture.read_text())
@@ -73,7 +71,6 @@ def parse(task: str, prompt: str, schema: type[T]) -> T:
             messages=messages,
             response_format={"type": "json_schema", "json_schema": {"name": schema.__name__, "schema": schema_json, "strict": True}},
             timeout=60,
-            max_retries=2,
         )
 
     messages = [{"role": "user", "content": prompt}]

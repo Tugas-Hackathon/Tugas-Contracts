@@ -8,6 +8,7 @@ from db import init_db
 from auth import router as auth_router
 from subjects import router as subjects_router
 from materials import router as materials_router
+from tutor import router as tutor_router
 
 app = FastAPI(title="Tugas API")
 
@@ -22,6 +23,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(subjects_router)
 app.include_router(materials_router)
+app.include_router(tutor_router)
 
 @app.on_event("startup")
 def startup():

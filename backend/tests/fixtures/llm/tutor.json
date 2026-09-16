@@ -1,0 +1,6 @@
+{
+  "answer": "A primary key uniquely identifies each row in a table. It cannot be NULL and must be unique across all rows.",
+  "citations": [
+    {"chunk_id": "M1p1", "quote": "A primary key uniquely identifies each row"}
+  ]
+}
