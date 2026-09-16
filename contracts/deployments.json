@@ -1,4 +1,10 @@
 {
+  "968": {
+    "address": "0xE2c7c1c96F45de15D2cDBb02dfF1E18f97106A76",
+    "txHash": "0x10f02cf136fbb2a011482db00695039bb698a595e201137f6a57e1f4e5ee4515",
+    "blockNumber": 23551897,
+    "deployedAt": "2026-09-16T01:32:21.309Z"
+  },
   "31337": {
     "address": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
     "txHash": "0x703e9fe203a1c936368e23beb3d873d7f2bf4ca71c2d1180ef2d0ddeb545a1d5",
