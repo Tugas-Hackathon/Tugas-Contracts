@@ -1,0 +1,8 @@
+{
+  "sections": [
+    {"title": "Introduction", "points": ["Define the problem", "State objectives"]},
+    {"title": "Literature Review", "points": ["Key papers", "Existing solutions"]},
+    {"title": "Methodology", "points": ["Data collection", "Analysis approach"]},
+    {"title": "Conclusion", "points": ["Summary", "Future work"]}
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "criteria": [
+    {"name": "Clarity", "met": true, "evidence": "The draft is clear.", "suggestion": ""},
+    {"name": "Depth", "met": false, "evidence": "Lacks detail.", "suggestion": "Add more analysis."}
+  ]
+}
