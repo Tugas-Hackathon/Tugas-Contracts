@@ -209,14 +209,14 @@ Models are chosen per *task*, not per call site, so swapping a model is a one-li
 
 ```python
 TASK_MODELS = {
-    "tutor":   ["anthropic/claude-opus-5", ...],
-    "rubric":  ["anthropic/claude-opus-5", ...],
-    "outline": ["anthropic/claude-opus-5", ...],
-    "ocr":     ["google/gemini-flash-1.5", ...],
+    "tutor":   "anthropic/claude-opus-5",
+    "rubric":  "anthropic/claude-opus-5",
+    "outline": "anthropic/claude-opus-5",
+    "ocr":     "google/gemini-flash-1.5",
 }
 ```
 
-Override any task at runtime with `LLM_MODEL_<TASK>` (e.g. `LLM_MODEL_TUTOR=openai/gpt-4o`).
+An unlisted task falls back to `openai/gpt-4o`.
 
 If the model returns JSON that fails validation, `parse` feeds the validation error back and retries **once**. A second failure raises `LLMDeclined`, which surfaces as a `502` — the API never returns half-parsed AI output.
 

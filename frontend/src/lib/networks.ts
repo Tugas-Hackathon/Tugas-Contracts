@@ -13,5 +13,3 @@ export const NETWORK = import.meta.env.VITE_NETWORK === "mainnet"
       explorer: "https://scan.bohr.life",
       symbol: "tBOT",
     }
-
-export const LEDGER_ADDRESS = import.meta.env.VITE_LEDGER_ADDRESS as `0x${string}`

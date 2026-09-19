@@ -2,6 +2,22 @@ import { useConnect, useDisconnect, useAccount, useChainId, useSwitchChain } fro
 import { useAuth } from "../hooks/useAuth"
 import { NETWORK } from "../lib/networks"
 
+function Btn({ onClick, compact, bg, hover, children }: {
+  onClick: () => void; compact: boolean; bg: string; hover: string; children: React.ReactNode
+}) {
+  return (
+    <button onClick={onClick}
+      className={compact
+        ? "w-full text-left text-xs rounded-lg px-3 py-2 transition-colors"
+        : "px-4 py-2 rounded-lg text-sm font-medium transition-colors"}
+      style={{ background: bg, color: "white" }}
+      onMouseEnter={e => (e.currentTarget.style.background = hover)}
+      onMouseLeave={e => (e.currentTarget.style.background = bg)}>
+      {children}
+    </button>
+  )
+}
+
 export function ConnectButton({ compact = false }: { compact?: boolean }) {
   const { isConnected } = useAccount()
   const chainId = useChainId()
@@ -10,76 +26,38 @@ export function ConnectButton({ compact = false }: { compact?: boolean }) {
   const { authed, login, address } = useAuth()
   const { switchChain } = useSwitchChain()
 
-  const wrongNetwork = isConnected && chainId !== NETWORK.id
-
-  if (!isConnected) {
-    return compact ? (
-      <button onClick={() => connect({ connector: connectors[0] })}
-        className="w-full text-left text-xs rounded-lg px-3 py-2"
-        style={{ background: "#4f46e5", color: "white" }}>
-        Connect Wallet
-      </button>
-    ) : (
-      <button onClick={() => connect({ connector: connectors[0] })}
-        className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700">
-        Connect Wallet
-      </button>
-    )
-  }
-
-  if (wrongNetwork) {
-    return compact ? (
-      <button onClick={() => switchChain({ chainId: NETWORK.id })}
-        className="w-full text-left text-xs rounded-lg px-3 py-2"
-        style={{ background: "#d97706", color: "white" }}>
-        Switch to {NETWORK.name}
-      </button>
-    ) : (
-      <button onClick={() => switchChain({ chainId: NETWORK.id })}
-        className="px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600">
-        Switch to {NETWORK.name}
-      </button>
-    )
-  }
-
-  if (!authed) {
-    return compact ? (
-      <button onClick={login}
-        className="w-full text-left text-xs rounded-lg px-3 py-2"
-        style={{ background: "#16a34a", color: "white" }}>
-        Sign in with wallet
-      </button>
-    ) : (
-      <button onClick={login}
-        className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">
-        Sign in
-      </button>
-    )
-  }
-
-  if (compact) {
+  if (!isConnected)
     return (
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-mono" style={{ color: "#9ca3af" }}>
-          {address?.slice(0, 6)}…{address?.slice(-4)}
-        </span>
-        <button onClick={() => { disconnect(); localStorage.removeItem("tugas_token") }}
-          className="text-xs px-2 py-1 rounded"
-          style={{ background: "#2a2a2a", color: "#9ca3af" }}>
-          Out
-        </button>
-      </div>
+      <Btn compact={compact} bg="#4f46e5" hover="#4338ca"
+        onClick={() => connect({ connector: connectors[0] })}>
+        Connect Wallet
+      </Btn>
     )
-  }
+
+  if (chainId !== NETWORK.id)
+    return (
+      <Btn compact={compact} bg="#d97706" hover="#b45309"
+        onClick={() => switchChain({ chainId: NETWORK.id })}>
+        Switch to {NETWORK.name}
+      </Btn>
+    )
+
+  if (!authed)
+    return (
+      <Btn compact={compact} bg="#16a34a" hover="#15803d" onClick={login}>
+        Sign in with wallet
+      </Btn>
+    )
 
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-xs text-gray-500 font-mono">
+    <div className="flex items-center justify-between gap-2">
+      <span className="text-xs font-mono" style={{ color: "var(--sb-text)" }}>
         {address?.slice(0, 6)}…{address?.slice(-4)}
       </span>
       <button onClick={() => { disconnect(); localStorage.removeItem("tugas_token") }}
-        className="px-3 py-1.5 text-xs border border-gray-300 rounded-lg hover:bg-gray-50">
-        Disconnect
+        className="text-xs px-2 py-1 rounded transition-colors"
+        style={{ background: "var(--sb-hover)", color: "var(--sb-text)" }}>
+        Out
       </button>
     </div>
   )

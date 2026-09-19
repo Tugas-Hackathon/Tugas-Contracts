@@ -6,15 +6,11 @@ from openai import OpenAI
 
 T = TypeVar("T", bound=BaseModel)
 
-TASK_MODELS: dict[str, list[str]] = {
-    "tutor":   ["anthropic/claude-opus-5", "anthropic/claude-sonnet-5"],
-    "rubric":  ["anthropic/claude-opus-5", "anthropic/claude-sonnet-5"],
-    "outline": ["anthropic/claude-opus-5", "anthropic/claude-sonnet-5"],
-    "extract": ["google/gemini-flash-1.5", "google/gemini-pro-1.5"],
-    "ocr":     ["google/gemini-flash-1.5", "google/gemini-pro-1.5"],
-    "quiz":    ["openai/gpt-4o", "openai/gpt-4o-mini"],
-    "plan":    ["openai/gpt-4o", "openai/gpt-4o-mini"],
-    "ideas":   ["openai/gpt-4o", "openai/gpt-4o-mini"],
+TASK_MODELS: dict[str, str] = {
+    "tutor":   "anthropic/claude-opus-5",
+    "rubric":  "anthropic/claude-opus-5",
+    "outline": "anthropic/claude-opus-5",
+    "ocr":     "google/gemini-flash-1.5",
 }
 
 _FIXTURES_DIR = Path(__file__).parent / "tests" / "fixtures" / "llm"
@@ -30,10 +26,7 @@ class LLMDeclined(Exception):
 
 
 def _model_for(task: str) -> str:
-    env_override = os.getenv(f"LLM_MODEL_{task.upper()}")
-    if env_override:
-        return env_override
-    return TASK_MODELS.get(task, ["openai/gpt-4o"])[0]
+    return TASK_MODELS.get(task, "openai/gpt-4o")
 
 
 def chat(task: str, messages: list[dict]) -> str:

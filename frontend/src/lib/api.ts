@@ -18,41 +18,31 @@ async function req(method: string, path: string, body?: unknown) {
   return r.json()
 }
 
-export const api = {
-  get: (path: string) => req("GET", path),
-  post: (path: string, body?: unknown) => req("POST", path, body),
-  delete: (path: string) => req("DELETE", path),
+async function blobUrl(mid: number) {
+  const r = await fetch(`${BASE}/materials/${mid}/download`, {
+    headers: { Authorization: `Bearer ${token()}` },
+  })
+  if (!r.ok) throw new Error(await r.text())
+  return URL.createObjectURL(await r.blob())
+}
 
+export const api = {
   nonce: (address: string) => req("GET", `/auth/nonce?address=${address}`),
   verify: (address: string, signature: string) =>
     req("POST", "/auth/verify", { address, signature }),
 
   subjects: () => req("GET", "/subjects"),
   createSubject: (name: string) => req("POST", "/subjects", { name }),
-  subject: (id: number) => req("GET", `/subjects/${id}`),
 
   materials: (sid: number) => req("GET", `/subjects/${sid}/materials`),
   deleteMaterial: (mid: number) => req("DELETE", `/materials/${mid}`),
   downloadMaterial: async (mid: number, filename: string) => {
-    const r = await fetch(`${BASE}/materials/${mid}/download`, {
-      headers: { Authorization: `Bearer ${token()}` },
-    })
-    if (!r.ok) throw new Error(await r.text())
-    const blob = await r.blob()
-    const url = URL.createObjectURL(blob)
+    const url = await blobUrl(mid)
     const a = document.createElement("a")
     a.href = url; a.download = filename; a.click()
     URL.revokeObjectURL(url)
   },
-  previewMaterial: async (mid: number) => {
-    const r = await fetch(`${BASE}/materials/${mid}/download`, {
-      headers: { Authorization: `Bearer ${token()}` },
-    })
-    if (!r.ok) throw new Error(await r.text())
-    const blob = await r.blob()
-    const url = URL.createObjectURL(blob)
-    window.open(url, "_blank")
-  },
+  previewMaterial: async (mid: number) => window.open(await blobUrl(mid), "_blank"),
   uploadMaterial: async (sid: number, file: File) => {
     const fd = new FormData()
     fd.append("file", file)

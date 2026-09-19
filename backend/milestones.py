@@ -87,21 +87,18 @@ def list_milestones(branch_id: int, user: str = Depends(current_user)):
 
 @router.post("/milestones/{milestone_id}/hash")
 def compute_hash(milestone_id: int, body: HashBody, user: str = Depends(current_user)):
-    with get_db() as db:
-        ms = db.execute("SELECT id FROM milestones WHERE id=? AND user_id=?",
-                        (milestone_id, user)).fetchone()
-        if not ms:
-            raise HTTPException(404, "milestone not found")
-
     work_hash = _keccak_hex(_normalise(body.draft))
     context_hash = _keccak_hex(body.brief + "\n" + body.rubric)
     level = max(0, min(100, body.ai_assist_level or 60))
 
     with get_db() as db:
-        db.execute(
-            "UPDATE milestones SET draft_text=?,work_hash=?,context_hash=?,ai_assist_level=? WHERE id=?",
-            (body.draft, work_hash, context_hash, level, milestone_id),
+        cur = db.execute(
+            "UPDATE milestones SET draft_text=?,work_hash=?,context_hash=?,ai_assist_level=? "
+            "WHERE id=? AND user_id=?",
+            (body.draft, work_hash, context_hash, level, milestone_id, user),
         )
+        if cur.rowcount == 0:
+            raise HTTPException(404, "milestone not found")
 
     return {"workHash": work_hash, "contextHash": context_hash, "aiAssistLevel": level}
 

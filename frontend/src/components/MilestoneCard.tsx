@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { useWriteContract } from "wagmi"
 import { api } from "../lib/api"
+import { NETWORK } from "../lib/networks"
 
 const ABI = [
   {
@@ -79,7 +80,7 @@ export function MilestoneCard({ milestone }: { milestone: any }) {
       <div className="flex items-start justify-between mb-3">
         <span className="font-medium text-sm" style={{ color: "var(--main-text)" }}>{milestone.title}</span>
         {milestone.tx_hash && (
-          <a href={`https://scan.bohr.life/tx/${milestone.tx_hash}`} target="_blank" rel="noreferrer"
+          <a href={`${NETWORK.explorer}/tx/${milestone.tx_hash}`} target="_blank" rel="noreferrer"
             className="text-xs text-indigo-400 hover:underline">View tx →</a>
         )}
       </div>
