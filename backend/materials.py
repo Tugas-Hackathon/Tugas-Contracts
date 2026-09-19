@@ -1,6 +1,7 @@
 import os, uuid, mimetypes
 from pathlib import Path
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
+from fastapi.responses import FileResponse
 from db import get_db
 from auth import current_user
 
@@ -120,3 +121,31 @@ def list_materials(subject_id: int, user: str = Depends(current_user)):
             (subject_id, user),
         ).fetchall()
     return [dict(r) for r in rows]
+
+
+@router.get("/materials/{material_id}/download")
+def download_material(material_id: int, user: str = Depends(current_user)):
+    with get_db() as db:
+        row = db.execute(
+            "SELECT filename,filepath,mime FROM materials WHERE id=? AND user_id=?",
+            (material_id, user),
+        ).fetchone()
+    if not row:
+        raise HTTPException(404, "material not found")
+    path = Path(row["filepath"])
+    if not path.exists():
+        raise HTTPException(404, "file missing on disk")
+    return FileResponse(path, media_type=row["mime"], filename=row["filename"])
+
+
+@router.delete("/materials/{material_id}", status_code=204)
+def delete_material(material_id: int, user: str = Depends(current_user)):
+    with get_db() as db:
+        row = db.execute(
+            "SELECT filepath FROM materials WHERE id=? AND user_id=?",
+            (material_id, user),
+        ).fetchone()
+        if not row:
+            raise HTTPException(404, "material not found")
+        db.execute("DELETE FROM materials WHERE id=?", (material_id,))
+    Path(row["filepath"]).unlink(missing_ok=True)

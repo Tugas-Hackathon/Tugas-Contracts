@@ -1,8 +1,22 @@
 import { useAccount, useSignMessage } from "wagmi"
-import { useState, useEffect } from "react"
+import { useState, useEffect, createContext, useContext } from "react"
 import { api } from "../lib/api"
 
-export function useAuth() {
+interface AuthCtx {
+  address: string | undefined
+  isConnected: boolean
+  authed: boolean
+  login: () => Promise<void>
+}
+
+export const AuthContext = createContext<AuthCtx>({
+  address: undefined,
+  isConnected: false,
+  authed: false,
+  login: async () => {},
+})
+
+export function useAuthProvider(): AuthCtx {
   const { address, isConnected } = useAccount()
   const { signMessageAsync } = useSignMessage()
   const [authed, setAuthed] = useState(!!localStorage.getItem("tugas_token"))
@@ -24,4 +38,8 @@ export function useAuth() {
   }
 
   return { address, isConnected, authed, login }
+}
+
+export function useAuth() {
+  return useContext(AuthContext)
 }

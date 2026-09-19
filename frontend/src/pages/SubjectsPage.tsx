@@ -6,14 +6,22 @@ export function SubjectsPage() {
   const [subjects, setSubjects] = useState<any[]>([])
   const [selected, setSelected] = useState<number | null>(null)
   const [name, setName] = useState("")
+  const [error, setError] = useState("")
 
-  useEffect(() => { api.subjects().then(setSubjects) }, [])
+  useEffect(() => {
+    api.subjects().then(setSubjects).catch(e => setError(e.message))
+  }, [])
 
   async function create() {
     if (!name.trim()) return
-    const s = await api.createSubject(name.trim())
-    setSubjects(p => [s, ...p])
-    setName("")
+    setError("")
+    try {
+      const s = await api.createSubject(name.trim())
+      setSubjects(p => [s, ...p])
+      setName("")
+    } catch (e: any) {
+      setError(e.message)
+    }
   }
 
   if (selected) return <SubjectPage id={selected} onBack={() => setSelected(null)} />
@@ -31,6 +39,9 @@ export function SubjectsPage() {
           Add
         </button>
       </div>
+      {error && (
+        <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4">{error}</p>
+      )}
       <div className="space-y-2">
         {subjects.map(s => (
           <button key={s.id} onClick={() => setSelected(s.id)}

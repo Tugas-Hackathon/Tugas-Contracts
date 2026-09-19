@@ -32,6 +32,27 @@ export const api = {
   subject: (id: number) => req("GET", `/subjects/${id}`),
 
   materials: (sid: number) => req("GET", `/subjects/${sid}/materials`),
+  deleteMaterial: (mid: number) => req("DELETE", `/materials/${mid}`),
+  downloadMaterial: async (mid: number, filename: string) => {
+    const r = await fetch(`${BASE}/materials/${mid}/download`, {
+      headers: { Authorization: `Bearer ${token()}` },
+    })
+    if (!r.ok) throw new Error(await r.text())
+    const blob = await r.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url; a.download = filename; a.click()
+    URL.revokeObjectURL(url)
+  },
+  previewMaterial: async (mid: number) => {
+    const r = await fetch(`${BASE}/materials/${mid}/download`, {
+      headers: { Authorization: `Bearer ${token()}` },
+    })
+    if (!r.ok) throw new Error(await r.text())
+    const blob = await r.blob()
+    const url = URL.createObjectURL(blob)
+    window.open(url, "_blank")
+  },
   uploadMaterial: async (sid: number, file: File) => {
     const fd = new FormData()
     fd.append("file", file)
