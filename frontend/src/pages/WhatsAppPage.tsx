@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faWhatsapp } from "@fortawesome/free-brands-svg-icons"
 import {
-  faQrcode, faUsers, faRotate, faLinkSlash, faUser, faXmark, faTriangleExclamation,
+  faQrcode, faUsers, faRotate, faLinkSlash, faUser, faXmark, faTriangleExclamation, faDownload,
 } from "@fortawesome/free-solid-svg-icons"
 import { api } from "../lib/api"
 import { Pill } from "../App"
@@ -23,7 +23,18 @@ export function WhatsAppPage() {
   const [groups, setGroups] = useState<any[] | null>(null)
   const [subjects, setSubjects] = useState<any[]>([])
   const [links, setLinks] = useState<Link[]>([])
+  const [syncing, setSyncing] = useState(false)
+  const [report, setReport] = useState<any[] | null>(null)
   const poll = useRef<number | null>(null)
+
+  async function runSync() {
+    setSyncing(true); setError(""); setReport(null)
+    try {
+      const res = await api.waSync()
+      setReport(res.synced)
+    } catch (e: any) { setError(e.message) }
+    finally { setSyncing(false) }
+  }
 
   useEffect(() => {
     refresh()
@@ -210,9 +221,62 @@ export function WhatsAppPage() {
             ))}
           </div>
 
+          {links.length > 0 && (
+            <div className="mt-6 pt-6" style={{ borderTop: "1px solid var(--surface-border)" }}>
+              <div className="flex items-center gap-3 mb-3">
+                <button onClick={runSync} disabled={syncing}
+                  className="px-4 py-2.5 rounded-xl text-sm font-medium text-white disabled:opacity-50 transition-all"
+                  style={{ background: "linear-gradient(135deg,#8b5cf6,#6d28d9)", boxShadow: "0 0 18px var(--accent-glow)" }}>
+                  <FontAwesomeIcon icon={syncing ? faRotate : faDownload}
+                    className={`text-xs mr-2 ${syncing ? "animate-spin" : ""}`} />
+                  {syncing ? "Reading messages…" : "Extract now"}
+                </button>
+                <span className="text-xs" style={{ color: "var(--text-faint)" }}>
+                  Reads the last 150 messages of each mapped group
+                </span>
+              </div>
+
+              {report && (
+                <div className="space-y-2.5 mt-4">
+                  {report.map((r: any) => (
+                    <div key={r.subject_id} className="rounded-xl px-4 py-3.5"
+                      style={{ background: "var(--surface)", border: "1px solid var(--surface-border)" }}>
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className="text-sm font-medium" style={{ color: "var(--text)" }}>{r.subject}</span>
+                        <Pill tone={r.kept > 0 ? "teal" : "dim"}>
+                          {r.new === 0 ? "nothing new" : `${r.kept} of ${r.new} kept`}
+                        </Pill>
+                      </div>
+                      {r.items.length === 0 ? (
+                        <p className="text-xs" style={{ color: "var(--text-faint)" }}>
+                          {r.new === 0 ? "No new messages since last extract." : "All new messages were chatter."}
+                        </p>
+                      ) : (
+                        <ul className="space-y-1 mt-2">
+                          {r.items.map((it: any, i: number) => (
+                            <li key={i} className="flex items-start gap-2 text-xs">
+                              <Pill tone={it.kind === "exam" ? "accent" : it.kind === "assignment" ? "teal" : "dim"}>
+                                {it.kind}
+                              </Pill>
+                              <span className="flex-1" style={{ color: "var(--text-dim)" }}>
+                                {it.title}
+                                {it.created && <span style={{ color: "var(--teal)" }}> · created</span>}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           <p className="text-xs mt-6 px-1 leading-relaxed" style={{ color: "var(--text-faint)" }}>
             Only mapped groups are read. Setting a focus person narrows it further to just that
             person's messages — useful when only the lecturer's announcements matter.
+            Assignments and exams found here become branches; everything kept also feeds the AI Tutor.
           </p>
         </div>
       )}

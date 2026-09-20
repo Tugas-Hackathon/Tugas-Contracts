@@ -1,3 +1,5 @@
+import os
+from pathlib import Path
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from db import get_db
@@ -65,11 +67,22 @@ def ask(subject_id: int, body: AskBody, user: str = Depends(current_user)):
     valid_ids = {cid for cid, _ in chunks}
     context = "\n\n---\n\n".join(f"[{cid}]\n{text}" for cid, text in chunks)
 
+    wa_path = Path(os.getenv("DATA_DIR", "./data")) / "context" / user / f"subject-{subject_id}.md"
+    wa_note = ""
+    if wa_path.exists():
+        wa = wa_path.read_text(encoding="utf-8").strip()
+        if wa:
+            wa_note = (
+                "\n\nCLASS GROUP NOTES (context only — never cite these, they have no chunk ID):\n"
+                f"{wa}"
+            )
+
     prompt = (
         "You are a study assistant. Answer ONLY using the provided study materials below.\n"
         "For every claim, cite the chunk ID (e.g. M1p2) and an exact short quote.\n"
         "If the answer is not in the materials, say so.\n\n"
-        f"MATERIALS:\n{context}\n\n"
+        f"MATERIALS:\n{context}"
+        f"{wa_note}\n\n"
         f"QUESTION: {body.question}"
     )
 

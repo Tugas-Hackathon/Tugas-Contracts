@@ -16,9 +16,25 @@ def _connect() -> sqlite3.Connection:
     return conn
 
 
+# (table, column, definition) — applied only when the column is absent, since
+# CREATE TABLE IF NOT EXISTS silently skips tables that already exist.
+_MIGRATIONS = [
+    ("messages", "wa_msg_id", "TEXT"),
+    ("messages", "sender_name", "TEXT"),
+]
+
+
 def init_db() -> None:
     conn = _connect()
     conn.executescript(_SCHEMA.read_text())
+    for table, column, decl in _MIGRATIONS:
+        existing = {r[1] for r in conn.execute(f"PRAGMA table_info({table})")}
+        if column not in existing:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
+    conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_messages_wa "
+        "ON messages(user_id, wa_msg_id)"
+    )
     conn.commit()
     conn.close()
 

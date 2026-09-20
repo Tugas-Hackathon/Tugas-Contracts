@@ -14,7 +14,7 @@ class LinkBody(BaseModel):
     focus_sender: Optional[str] = None
     focus_sender_name: Optional[str] = None
 
-def _bot(method: str, path: str, body: dict | None = None):
+def bot_request(method: str, path: str, body: dict | None = None):
     # Read at call time: reading at import binds whatever .env held when the
     # module first loaded, which goes stale the moment the file is edited.
     bot_url = os.getenv("BOT_URL", "http://127.0.0.1:8787")
@@ -43,27 +43,27 @@ def _bot(method: str, path: str, body: dict | None = None):
 
 @router.post("/session")
 def start_session(user: str = Depends(current_user)):
-    return _bot("POST", f"/session/{user}/start")
+    return bot_request("POST", f"/session/{user}/start")
 
 
 @router.get("/session")
 def session_status(user: str = Depends(current_user)):
-    return _bot("GET", f"/session/{user}/status")
+    return bot_request("GET", f"/session/{user}/status")
 
 
 @router.get("/groups")
 def list_groups(user: str = Depends(current_user)):
-    return _bot("GET", f"/session/{user}/groups")
+    return bot_request("GET", f"/session/{user}/groups")
 
 
 @router.get("/senders")
 def list_senders(chat_id: str, user: str = Depends(current_user)):
-    return _bot("GET", f"/session/{user}/senders?chat_id={urllib.parse.quote(chat_id)}")
+    return bot_request("GET", f"/session/{user}/senders?chat_id={urllib.parse.quote(chat_id)}")
 
 
 @router.delete("/session", status_code=204)
 def logout(user: str = Depends(current_user)):
-    _bot("POST", f"/session/{user}/logout")
+    bot_request("POST", f"/session/{user}/logout")
 
 
 @router.get("/links")

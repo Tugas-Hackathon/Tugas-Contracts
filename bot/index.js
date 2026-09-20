@@ -125,6 +125,39 @@ app.get("/session/:user/senders", async (req, res) => {
   }
 })
 
+app.get("/session/:user/messages", async (req, res) => {
+  const s = session(req.params.user)
+  const chatId = req.query.chat_id
+  const limit = Math.min(Number(req.query.limit ?? 100), 300)
+  if (s.state !== "ready") return res.status(409).json({ error: "not linked", state: s.state })
+  if (!chatId) return res.status(422).json({ error: "chat_id required" })
+  try {
+    const chat = await s.client.getChatById(String(chatId))
+    const msgs = await chat.fetchMessages({ limit })
+    const out = []
+    for (const m of msgs) {
+      if (!m.body) continue
+      const senderId = m.author ?? m.from
+      let senderName = senderId
+      try {
+        const c = await m.getContact()
+        senderName = c.pushname || c.name || String(senderId).split("@")[0]
+      } catch { /* contact unavailable */ }
+      out.push({
+        id: m.id._serialized,
+        body: m.body,
+        sender_id: senderId,
+        sender_name: senderName,
+        timestamp: m.timestamp,
+        from_me: m.fromMe,
+      })
+    }
+    res.json(out)
+  } catch (e) {
+    res.status(502).json({ error: e?.message ?? String(e) })
+  }
+})
+
 app.post("/session/:user/logout", async (req, res) => {
   const s = session(req.params.user)
   try {

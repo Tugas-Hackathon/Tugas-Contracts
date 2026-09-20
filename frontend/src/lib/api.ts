@@ -102,4 +102,6 @@ export const api = {
     focus_sender?: string | null; focus_sender_name?: string | null
   }) => req("PUT", `/whatsapp/links/${subjectId}`, body),
   waClearLink: (subjectId: number) => req("DELETE", `/whatsapp/links/${subjectId}`),
+  waSync: () => req("POST", "/whatsapp/sync"),
+  waContext: (subjectId: number) => req("GET", `/whatsapp/context/${subjectId}`),
 }
