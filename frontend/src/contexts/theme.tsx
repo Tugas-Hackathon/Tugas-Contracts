@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from "react"
+import { createContext, useContext, useState, useEffect } from "react"
 
 type Theme = "light" | "dark"
 
@@ -11,6 +11,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>(
     () => (localStorage.getItem("tugas_theme") as Theme) ?? "dark"
   )
+
+  // Native controls — select dropdowns, scrollbars, date pickers — are drawn by
+  // the OS and ignore CSS. color-scheme is the only way to darken them.
+  useEffect(() => {
+    document.documentElement.style.colorScheme = theme
+  }, [theme])
 
   function toggle() {
     setTheme(t => {
