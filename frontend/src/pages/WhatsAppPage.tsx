@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faWhatsapp } from "@fortawesome/free-brands-svg-icons"
 import {
-  faQrcode, faUsers, faRotate, faLinkSlash, faUser, faXmark, faTriangleExclamation, faDownload,
+  faQrcode, faUsers, faRotate, faLinkSlash, faUser, faXmark, faTriangleExclamation, faDownload, faChevronDown,
 } from "@fortawesome/free-solid-svg-icons"
 import { api } from "../lib/api"
 import { Pill } from "../App"
@@ -284,6 +284,105 @@ export function WhatsAppPage() {
   )
 }
 
+/**
+ * Native <select> popups are drawn by the OS and ignore page CSS, so they
+ * render light against the dark workspace no matter what is applied. This is a
+ * plain div, which also makes 131 groups searchable instead of a scroll hunt.
+ */
+function Picker({ value, options, placeholder, disabled, onPick }: {
+  value: string | null
+  options: { id: string; label: string; meta?: string }[]
+  placeholder: string
+  disabled?: boolean
+  onPick: (id: string | null) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [q, setQ] = useState("")
+  const boxRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    function onDown(e: MouseEvent) {
+      if (!boxRef.current?.contains(e.target as Node)) setOpen(false)
+    }
+    function onKey(e: KeyboardEvent) { if (e.key === "Escape") setOpen(false) }
+    document.addEventListener("mousedown", onDown)
+    document.addEventListener("keydown", onKey)
+    return () => {
+      document.removeEventListener("mousedown", onDown)
+      document.removeEventListener("keydown", onKey)
+    }
+  }, [open])
+
+  const current = options.find(o => o.id === value)
+  const needle = q.trim().toLowerCase()
+  const shown = needle ? options.filter(o => o.label.toLowerCase().includes(needle)) : options
+
+  return (
+    <div ref={boxRef} className="relative">
+      <button disabled={disabled}
+        onClick={() => { setOpen(o => !o); setQ("") }}
+        className="flex items-center gap-2 text-xs rounded-lg px-2.5 py-1.5 max-w-[210px] w-[210px] disabled:opacity-50"
+        style={{ background: "var(--input-bg)", color: "var(--text)", border: "1px solid var(--input-border)" }}>
+        <span className="flex-1 truncate text-left"
+          style={{ color: current ? "var(--text)" : "var(--text-faint)" }}>
+          {current?.label ?? placeholder}
+        </span>
+        <FontAwesomeIcon icon={faChevronDown} className="text-[9px] shrink-0" style={{ color: "var(--text-faint)" }} />
+      </button>
+
+      {open && (
+        <div className="absolute right-0 z-50 mt-1 w-[280px] rounded-xl overflow-hidden shadow-2xl"
+          style={{ background: "var(--panel-solid)", border: "1px solid var(--panel-border)" }}>
+          <div className="p-2" style={{ borderBottom: "1px solid var(--panel-border)" }}>
+            <input autoFocus value={q} onChange={e => setQ(e.target.value)}
+              placeholder="Search groups…"
+              className="w-full text-xs rounded-lg px-2.5 py-1.5 outline-none"
+              style={{ background: "var(--input-bg)", color: "var(--text)", border: "1px solid var(--input-border)" }} />
+          </div>
+
+          <div className="max-h-64 overflow-y-auto py-1">
+            <Row label="Not linked" muted
+              onClick={() => { onPick(null); setOpen(false) }} />
+            {shown.map(o => (
+              <Row key={o.id} label={o.label} meta={o.meta} active={o.id === value}
+                onClick={() => { onPick(o.id); setOpen(false) }} />
+            ))}
+            {shown.length === 0 && (
+              <p className="text-xs px-3 py-4 text-center" style={{ color: "var(--text-faint)" }}>
+                No group matches "{q.trim()}".
+              </p>
+            )}
+          </div>
+
+          <div className="px-3 py-1.5 text-[10px] font-mono"
+            style={{ borderTop: "1px solid var(--panel-border)", color: "var(--text-faint)" }}>
+            {shown.length} of {options.length}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function Row({ label, meta, active, muted, onClick }: {
+  label: string; meta?: string; active?: boolean; muted?: boolean; onClick: () => void
+}) {
+  return (
+    <button onClick={onClick}
+      className="w-full flex items-center gap-2 px-3 py-2 text-left text-xs transition-colors"
+      style={{
+        background: active ? "var(--accent-soft)" : "transparent",
+        color: active ? "var(--accent-bright)" : muted ? "var(--text-faint)" : "var(--text)",
+      }}
+      onMouseEnter={e => { if (!active) e.currentTarget.style.background = "var(--surface-hover)" }}
+      onMouseLeave={e => { if (!active) e.currentTarget.style.background = "transparent" }}>
+      <span className="flex-1 truncate">{label}</span>
+      {meta && <span className="text-[10px] font-mono shrink-0" style={{ color: "var(--text-faint)" }}>{meta}</span>}
+    </button>
+  )
+}
+
 function ErrorNote({ text }: { text: string }) {
   return (
     <div className="flex items-start gap-2 rounded-xl px-3 py-2.5 my-4"
@@ -327,20 +426,16 @@ function SubjectRow({ subject, groups, link, onMap, onFocus }: {
           {subject.name}
         </span>
 
-        <select
-          value={link?.chat_id ?? ""}
-          onChange={e => {
-            const g = (groups ?? []).find(x => x.id === e.target.value)
-            onMap(g ?? null)
-          }}
+        <Picker
+          value={link?.chat_id ?? null}
           disabled={!groups}
-          className="text-xs rounded-lg px-2.5 py-1.5 outline-none max-w-[190px]"
-          style={{ background: "var(--input-bg)", color: "var(--text)", border: "1px solid var(--input-border)" }}>
-          <option value="">{groups ? "Not linked" : "Loading groups…"}</option>
-          {(groups ?? []).map(g => (
-            <option key={g.id} value={g.id}>{g.name}</option>
-          ))}
-        </select>
+          placeholder={groups ? "Not linked" : "Loading groups…"}
+          options={(groups ?? []).map(g => ({
+            id: g.id,
+            label: g.name,
+            meta: g.participants ? `${g.participants}` : undefined,
+          }))}
+          onPick={id => onMap(id ? (groups ?? []).find(x => x.id === id) ?? null : null)} />
       </div>
 
       {link && (
@@ -365,17 +460,15 @@ function SubjectRow({ subject, groups, link, onMap, onFocus }: {
             ) : senderError ? (
               <span className="text-[11px]" style={{ color: "var(--red)" }}>{senderError}</span>
             ) : (
-              <select autoFocus defaultValue=""
-                onChange={e => {
-                  const s = (senders ?? []).find(x => x.id === e.target.value)
+              <Picker
+                value={null}
+                placeholder="Pick a person…"
+                options={(senders ?? []).map(s => ({ id: s.id, label: s.name }))}
+                onPick={id => {
+                  const s = (senders ?? []).find(x => x.id === id)
                   if (s) onFocus(s)
                   setPickingFocus(false)
-                }}
-                className="text-[11px] rounded-lg px-2 py-1 outline-none"
-                style={{ background: "var(--input-bg)", color: "var(--text)", border: "1px solid var(--input-border)" }}>
-                <option value="">Pick a person…</option>
-                {(senders ?? []).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
+                }} />
             )
           ) : (
             <button onClick={openFocus} className="text-[11px] hover:underline" style={{ color: "var(--text-dim)" }}>
