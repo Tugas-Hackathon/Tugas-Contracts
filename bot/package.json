@@ -4,8 +4,8 @@
   "type": "module",
   "description": "WhatsApp sidecar for Tugas — holds per-user sessions, exposes QR + group listing to the backend",
   "scripts": {
-    "start": "node index.js",
-    "dev": "node --watch index.js"
+    "start": "node --env-file-if-exists=.env index.js",
+    "dev": "node --env-file-if-exists=.env --watch index.js"
   },
   "dependencies": {
     "express": "^4.21.2",

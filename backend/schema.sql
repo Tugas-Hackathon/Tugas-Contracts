@@ -125,3 +125,15 @@ CREATE TABLE IF NOT EXISTS runs (
     result TEXT,
     created_at INTEGER NOT NULL DEFAULT (unixepoch())
 );
+
+CREATE TABLE IF NOT EXISTS wa_links (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL REFERENCES users(address),
+    subject_id INTEGER NOT NULL REFERENCES subjects(id),
+    chat_id TEXT NOT NULL,
+    chat_name TEXT NOT NULL,
+    focus_sender TEXT,
+    focus_sender_name TEXT,
+    created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+    UNIQUE(user_id, subject_id)
+);

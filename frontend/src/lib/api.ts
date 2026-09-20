@@ -13,16 +13,27 @@ async function req(method: string, path: string, body?: unknown) {
     },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   })
-  if (!r.ok) throw new Error(await r.text())
+  if (!r.ok) throw new Error(await errorText(r))
   if (r.status === 204) return null
   return r.json()
+}
+
+// FastAPI errors arrive as {"detail": "..."}; show the message, not the envelope.
+async function errorText(r: Response) {
+  const body = await r.text()
+  try {
+    const parsed = JSON.parse(body)
+    const d = parsed?.detail ?? parsed?.error
+    if (typeof d === "string") return d
+  } catch { /* not JSON */ }
+  return body || `Request failed (${r.status})`
 }
 
 async function blobUrl(mid: number) {
   const r = await fetch(`${BASE}/materials/${mid}/download`, {
     headers: { Authorization: `Bearer ${token()}` },
   })
-  if (!r.ok) throw new Error(await r.text())
+  if (!r.ok) throw new Error(await errorText(r))
   return URL.createObjectURL(await r.blob())
 }
 
@@ -51,7 +62,7 @@ export const api = {
       headers: { Authorization: `Bearer ${token()}` },
       body: fd,
     })
-    if (!r.ok) throw new Error(await r.text())
+    if (!r.ok) throw new Error(await errorText(r))
     return r.json()
   },
 
@@ -85,4 +96,10 @@ export const api = {
   waGroups: () => req("GET", "/whatsapp/groups"),
   waSenders: (chatId: string) => req("GET", `/whatsapp/senders?chat_id=${encodeURIComponent(chatId)}`),
   waLogout: () => req("DELETE", "/whatsapp/session"),
+  waLinks: () => req("GET", "/whatsapp/links"),
+  waSetLink: (subjectId: number, body: {
+    chat_id: string; chat_name: string
+    focus_sender?: string | null; focus_sender_name?: string | null
+  }) => req("PUT", `/whatsapp/links/${subjectId}`, body),
+  waClearLink: (subjectId: number) => req("DELETE", `/whatsapp/links/${subjectId}`),
 }
