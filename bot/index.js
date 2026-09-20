@@ -98,20 +98,75 @@ app.get("/session/:user/groups", async (req, res) => {
         participants: c.participants?.length ?? 0,
       }))
     } catch (e) {
-      // getChats builds a full Chat model per conversation and throws from
-      // WhatsApp Web's minified internals when that shape drifts. The raw
-      // store still holds what we need, so read it directly.
-      console.warn("getChats failed (%s) — falling back to Store", e?.message ?? e)
-      out = await s.client.pupPage.evaluate(() => {
-        const chat = window.Store?.Chat
-        if (!chat?.getModelsArray) throw new Error("Store.Chat unavailable")
-        return chat.getModelsArray()
-          .filter(c => c.id?.server === "g.us" || c.isGroup)
-          .map(c => ({
-            id: c.id?._serialized ?? String(c.id),
-            name: c.formattedTitle || c.name || "(unnamed group)",
-            participants: c.groupMetadata?.participants?.length ?? 0,
-          }))
+      // getChats builds a Chat model per conversation and dies on an
+      // IndexedDB lookup when the in-memory store is not hydrated. WhatsApp
+      // keeps the same chats on disk in IndexedDB, so read that instead —
+      // getAll() needs no key and does not depend on the library's internals.
+      console.warn("getChats failed (%s) — reading IndexedDB", e?.message ?? e)
+      out = await s.client.pupPage.evaluate(async () => {
+        const open = name => new Promise((res, rej) => {
+          const r = indexedDB.open(name)
+          r.onsuccess = () => res(r.result)
+          r.onerror = () => rej(r.error)
+        })
+        const readAll = (db, store) => new Promise((res, rej) => {
+          const rq = db.transaction(store, "readonly").objectStore(store).getAll()
+          rq.onsuccess = () => res(rq.result)
+          rq.onerror = () => rej(rq.error)
+        })
+
+        const dbs = await indexedDB.databases()
+        const found = []
+        const meta = new Map()   // chat id -> { subject, participants }
+
+        for (const { name } of dbs) {
+          if (!name) continue
+          let db
+          try { db = await open(name) } catch { continue }
+          const stores = [...db.objectStoreNames]
+
+          // Group subjects live apart from the chat rows, so collect them first.
+          for (const s of stores.filter(n => /group.*metadata|metadata.*group/i.test(n))) {
+            let rows = []
+            try { rows = await readAll(db, s) } catch { continue }
+            for (const g of rows) {
+              const id = typeof g?.id === "string" ? g.id : g?.id?._serialized
+              if (typeof id === "string") {
+                meta.set(id, { subject: g.subject, participants: g.participants?.length ?? 0 })
+              }
+            }
+          }
+
+          const chatStore = stores.find(n => n.toLowerCase() === "chat")
+          if (chatStore) {
+            let rows = []
+            try { rows = await readAll(db, chatStore) } catch { /* unreadable */ }
+            for (const c of rows) {
+              const id = typeof c?.id === "string" ? c.id : c?.id?._serialized
+              if (typeof id !== "string" || !id.endsWith("@g.us")) continue
+              const m = meta.get(id)
+              found.push({
+                id,
+                name: c.name || c.subject || m?.subject || null,
+                participants: m?.participants ?? 0,
+              })
+            }
+          }
+          db.close()
+        }
+
+        if (!found.length) throw new Error("no groups found in IndexedDB — history may still be syncing")
+
+        // Backfill names discovered in a later database, drop duplicates,
+        // and float named groups up so the list is usable.
+        const byId = new Map()
+        for (const g of found) {
+          const prev = byId.get(g.id)
+          if (!prev || (!prev.name && g.name)) byId.set(g.id, g)
+        }
+        return [...byId.values()]
+          .map(g => ({ ...g, name: g.name || meta.get(g.id)?.subject || `Group ${g.id.slice(0, 8)}` }))
+          .sort((a, b) => a.name.localeCompare(b.name))
       })
     }
     console.log(`groups: ${out.length}`)
