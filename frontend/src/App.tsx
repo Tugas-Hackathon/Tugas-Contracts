@@ -10,6 +10,7 @@ import { Sidebar } from "./components/Sidebar"
 import { ConnectButton } from "./components/ConnectButton"
 import { ChatBox } from "./components/ChatBox"
 import { BranchPage } from "./pages/BranchPage"
+import { WhatsAppPage } from "./pages/WhatsAppPage"
 import { api } from "./lib/api"
 
 export type View =
@@ -17,6 +18,7 @@ export type View =
   | { type: "materials"; subjectId: number }
   | { type: "tutor"; subjectId: number }
   | { type: "branch"; branchId: number; subjectId: number }
+  | { type: "whatsapp" }
 
 export default function App() {
   const { authed } = useAuth()
@@ -159,6 +161,7 @@ function MainContent({ view, onNavigate }: { view: View; onNavigate: (v: View) =
   if (view.type === "materials") return <MaterialsView subjectId={view.subjectId} />
   if (view.type === "tutor") return <TutorView subjectId={view.subjectId} />
   if (view.type === "branch") return <BranchPage id={view.branchId} />
+  if (view.type === "whatsapp") return <WhatsAppPage />
   return null
 }
 

@@ -79,4 +79,10 @@ export const api = {
 
   ask: (sid: number, question: string) =>
     req("POST", `/subjects/${sid}/ask`, { question }),
+
+  waStart: () => req("POST", "/whatsapp/session"),
+  waStatus: () => req("GET", "/whatsapp/session"),
+  waGroups: () => req("GET", "/whatsapp/groups"),
+  waSenders: (chatId: string) => req("GET", `/whatsapp/senders?chat_id=${encodeURIComponent(chatId)}`),
+  waLogout: () => req("DELETE", "/whatsapp/session"),
 }

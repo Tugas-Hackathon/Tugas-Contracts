@@ -5,6 +5,7 @@ import {
   faPaperclip, faRobot, faFileLines, faSun, faMoon,
   faMagnifyingGlass, faXmark,
 } from "@fortawesome/free-solid-svg-icons"
+import { faWhatsapp } from "@fortawesome/free-brands-svg-icons"
 import { api } from "../lib/api"
 import { ConnectButton } from "./ConnectButton"
 import { useTheme } from "../contexts/theme"
@@ -222,6 +223,16 @@ export function Sidebar({ view, onNavigate, onCrumb }: Props) {
 
       {/* Footer */}
       <div className="px-3 py-3 space-y-2" style={{ borderTop: "1px solid var(--panel-border)" }}>
+        <button onClick={() => go({ type: "whatsapp" }, "WhatsApp")}
+          className="w-full flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs transition-colors"
+          style={{
+            background: isActive({ type: "whatsapp" }) ? "var(--teal-soft)" : "var(--surface)",
+            border: `1px solid ${isActive({ type: "whatsapp" }) ? "var(--teal-border)" : "var(--surface-border)"}`,
+            color: isActive({ type: "whatsapp" }) ? "var(--teal)" : "var(--text-dim)",
+          }}>
+          <FontAwesomeIcon icon={faWhatsapp} className="text-[11px]" style={{ color: "var(--teal)" }} />
+          <span className="flex-1 text-left">WhatsApp</span>
+        </button>
         <button onClick={toggle}
           className="w-full flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs transition-colors"
           style={{ background: "var(--surface)", border: "1px solid var(--surface-border)", color: "var(--text-dim)" }}
