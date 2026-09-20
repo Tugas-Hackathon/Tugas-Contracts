@@ -29,50 +29,88 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
 export function useTheme() { return useContext(ThemeContext) }
 
-/* CSS variable maps */
+/* Smart Glass OS tokens */
 export const vars = {
   dark: {
-    "--sb-bg": "#171717",
-    "--sb-border": "rgba(255,255,255,0.08)",
-    "--sb-text": "#6b7280",
-    "--sb-text-bright": "#e5e7eb",
-    "--sb-hover": "#2a2a2a",
-    "--sb-active": "#2d2d3a",
-    "--sb-active-text": "#a5b4fc",
-    "--sb-input-bg": "#252525",
-    "--sb-input-border": "rgba(255,255,255,0.18)",
-    "--main-bg": "#1a1a1a",
-    "--main-text": "#e5e7eb",
-    "--main-muted": "#6b7280",
-    "--card-bg": "#252525",
-    "--card-border": "rgba(255,255,255,0.08)",
-    "--input-bg": "#2a2a2a",
-    "--input-border": "rgba(255,255,255,0.15)",
-    "--msg-user-bg": "#4f46e5",
+    "--page-bg": "#08070d",
+    "--glow-1": "rgba(139,92,246,0.22)",
+    "--glow-2": "rgba(45,212,191,0.10)",
+    "--glow-3": "rgba(109,40,217,0.16)",
+
+    "--panel": "rgba(255,255,255,0.028)",
+    "--panel-solid": "#131120",
+    "--panel-border": "rgba(255,255,255,0.075)",
+    "--panel-inset": "rgba(255,255,255,0.05)",
+
+    "--surface": "rgba(255,255,255,0.022)",
+    "--surface-hover": "rgba(255,255,255,0.055)",
+    "--surface-border": "rgba(255,255,255,0.06)",
+
+    "--text": "#eceaf5",
+    "--text-dim": "#9b96b4",
+    "--text-faint": "#66617f",
+
+    "--accent": "#8b5cf6",
+    "--accent-bright": "#a78bfa",
+    "--accent-soft": "rgba(139,92,246,0.14)",
+    "--accent-border": "rgba(167,139,250,0.38)",
+    "--accent-glow": "rgba(139,92,246,0.45)",
+
+    "--teal": "#2dd4bf",
+    "--teal-soft": "rgba(45,212,191,0.12)",
+    "--teal-border": "rgba(45,212,191,0.32)",
+
+    "--green": "#22c55e",
+    "--amber": "#f59e0b",
+    "--red": "#f87171",
+
+    "--input-bg": "rgba(255,255,255,0.04)",
+    "--input-border": "rgba(255,255,255,0.09)",
+
+    "--msg-user-bg": "linear-gradient(135deg,#7c3aed,#6d28d9)",
     "--msg-user-text": "#ffffff",
-    "--msg-ai-bg": "#2d2d2d",
-    "--msg-ai-text": "#e5e7eb",
+    "--msg-ai-bg": "rgba(255,255,255,0.045)",
+    "--msg-ai-text": "#eceaf5",
   },
   light: {
-    "--sb-bg": "#f1f3f5",
-    "--sb-border": "#e2e8f0",
-    "--sb-text": "#64748b",
-    "--sb-text-bright": "#1e293b",
-    "--sb-hover": "#e4e8ee",
-    "--sb-active": "#ede9fe",
-    "--sb-active-text": "#4f46e5",
-    "--sb-input-bg": "#ffffff",
-    "--sb-input-border": "#cbd5e1",
-    "--main-bg": "#ffffff",
-    "--main-text": "#111827",
-    "--main-muted": "#6b7280",
-    "--card-bg": "#f9fafb",
-    "--card-border": "#e5e7eb",
-    "--input-bg": "#ffffff",
-    "--input-border": "#d1d5db",
-    "--msg-user-bg": "#4f46e5",
+    "--page-bg": "#eceaf4",
+    "--glow-1": "rgba(139,92,246,0.20)",
+    "--glow-2": "rgba(45,212,191,0.14)",
+    "--glow-3": "rgba(167,139,250,0.16)",
+
+    "--panel": "rgba(255,255,255,0.72)",
+    "--panel-solid": "#ffffff",
+    "--panel-border": "rgba(23,16,48,0.09)",
+    "--panel-inset": "rgba(255,255,255,0.9)",
+
+    "--surface": "rgba(23,16,48,0.022)",
+    "--surface-hover": "rgba(23,16,48,0.055)",
+    "--surface-border": "rgba(23,16,48,0.07)",
+
+    "--text": "#1a1530",
+    "--text-dim": "#5f5980",
+    "--text-faint": "#8b86a3",
+
+    "--accent": "#7c3aed",
+    "--accent-bright": "#6d28d9",
+    "--accent-soft": "rgba(124,58,237,0.10)",
+    "--accent-border": "rgba(124,58,237,0.30)",
+    "--accent-glow": "rgba(124,58,237,0.30)",
+
+    "--teal": "#0d9488",
+    "--teal-soft": "rgba(13,148,136,0.10)",
+    "--teal-border": "rgba(13,148,136,0.28)",
+
+    "--green": "#16a34a",
+    "--amber": "#d97706",
+    "--red": "#dc2626",
+
+    "--input-bg": "rgba(255,255,255,0.75)",
+    "--input-border": "rgba(23,16,48,0.12)",
+
+    "--msg-user-bg": "linear-gradient(135deg,#7c3aed,#6d28d9)",
     "--msg-user-text": "#ffffff",
-    "--msg-ai-bg": "#f3f4f6",
-    "--msg-ai-text": "#111827",
+    "--msg-ai-bg": "rgba(23,16,48,0.04)",
+    "--msg-ai-text": "#1a1530",
   },
 }

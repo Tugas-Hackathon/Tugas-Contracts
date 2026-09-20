@@ -1,20 +1,23 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import {
   faChevronDown, faChevronRight, faPlus, faCheck,
   faPaperclip, faRobot, faFileLines, faSun, faMoon,
+  faMagnifyingGlass, faXmark,
 } from "@fortawesome/free-solid-svg-icons"
 import { api } from "../lib/api"
 import { ConnectButton } from "./ConnectButton"
 import { useTheme } from "../contexts/theme"
+import { Kbd, Pill } from "../App"
 import type { View } from "../App"
 
 interface Props {
   view: View
   onNavigate: (v: View) => void
+  onCrumb: (c: string) => void
 }
 
-export function Sidebar({ view, onNavigate }: Props) {
+export function Sidebar({ view, onNavigate, onCrumb }: Props) {
   const { theme, toggle } = useTheme()
   const [subjects, setSubjects] = useState<any[]>([])
   const [branches, setBranches] = useState<Record<number, any[]>>({})
@@ -22,10 +25,36 @@ export function Sidebar({ view, onNavigate }: Props) {
   const [newSubject, setNewSubject] = useState("")
   const [adding, setAdding] = useState(false)
   const [addError, setAddError] = useState("")
+  const [query, setQuery] = useState("")
+  const searchRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     api.subjects().then(setSubjects).catch(() => {})
   }, [])
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault()
+        searchRef.current?.focus()
+      }
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [])
+
+  const q = query.trim().toLowerCase()
+  const visible = q
+    ? subjects.filter(s =>
+        s.name.toLowerCase().includes(q) ||
+        (branches[s.id] ?? []).some((b: any) => b.title.toLowerCase().includes(q))
+      )
+    : subjects
+
+  function go(v: View, crumb: string) {
+    onNavigate(v)
+    onCrumb(crumb)
+  }
 
   function toggleSubject(id: number) {
     setExpanded(prev => {
@@ -64,22 +93,53 @@ export function Sidebar({ view, onNavigate }: Props) {
   const isActive = (v: View) => JSON.stringify(v) === JSON.stringify(view)
 
   return (
-    <aside className="flex flex-col h-screen w-64 shrink-0 select-none"
-      style={{ background: "var(--sb-bg)", borderRight: "1px solid var(--sb-border)" }}>
+    <aside className="relative flex flex-col w-64 shrink-0 select-none rounded-2xl overflow-hidden backdrop-blur-xl"
+      style={{ background: "var(--panel)", border: "1px solid var(--panel-border)" }}>
 
-      {/* Logo */}
-      <div className="px-4 pt-5 pb-3 flex items-center gap-2">
-        <div className="w-7 h-7 rounded-lg bg-indigo-500 flex items-center justify-center shrink-0">
-          <span className="text-white text-xs font-bold">T</span>
+      {/* Brand */}
+      <div className="px-4 pt-4 pb-3 flex items-center gap-3"
+        style={{ borderBottom: "1px solid var(--panel-border)" }}>
+        <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+          style={{
+            background: "linear-gradient(135deg,#8b5cf6,#6d28d9)",
+            boxShadow: "0 0 18px var(--accent-glow)",
+          }}>
+          <span className="text-white text-sm font-bold">T</span>
         </div>
-        <span className="font-semibold text-sm tracking-wide" style={{ color: "var(--sb-text-bright)" }}>Tugas</span>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-semibold leading-tight" style={{ color: "var(--text)" }}>Tugas</div>
+          <div className="text-[9px] font-mono uppercase tracking-[0.18em] leading-tight" style={{ color: "var(--text-faint)" }}>
+            Smart Glass OS
+          </div>
+        </div>
+        <Pill tone="dim">v2.4</Pill>
       </div>
 
-      {/* New subject input */}
-      <div className="px-3 mb-3">
+      {/* Search */}
+      <div className="px-3 pt-3">
+        <div className="flex items-center gap-2 rounded-xl px-3 py-2 transition-colors"
+          style={{ background: "var(--input-bg)", border: "1px solid var(--input-border)" }}>
+          <FontAwesomeIcon icon={faMagnifyingGlass} className="text-[10px] shrink-0"
+            style={{ color: "var(--text-faint)" }} />
+          <input ref={searchRef} value={query}
+            onChange={e => setQuery(e.target.value)}
+            onKeyDown={e => e.key === "Escape" && setQuery("")}
+            placeholder="Search subjects…"
+            className="flex-1 min-w-0 bg-transparent text-xs outline-none"
+            style={{ color: "var(--text)" }} />
+          {query
+            ? <button onClick={() => setQuery("")} className="shrink-0" style={{ color: "var(--text-faint)" }}>
+                <FontAwesomeIcon icon={faXmark} className="text-[10px]" />
+              </button>
+            : <Kbd>⌘K</Kbd>}
+        </div>
+      </div>
+
+      {/* New subject */}
+      <div className="px-3 pt-2 pb-2">
         {adding ? (
           <div>
-            <div className="flex gap-1">
+            <div className="flex gap-1.5">
               <input autoFocus value={newSubject}
                 onChange={e => { setNewSubject(e.target.value); setAddError("") }}
                 onKeyDown={e => {
@@ -87,59 +147,65 @@ export function Sidebar({ view, onNavigate }: Props) {
                   if (e.key === "Escape") { setAdding(false); setAddError(""); setNewSubject("") }
                 }}
                 placeholder="e.g. Database Systems"
-                className="flex-1 text-xs rounded-md px-2 py-1.5 outline-none"
-                style={{ background: "var(--sb-input-bg)", color: "var(--sb-text-bright)", border: "1px solid var(--sb-input-border)" }} />
-              <button onClick={addSubject}
-                className="text-xs px-3 py-1 rounded-md text-white font-semibold"
-                style={{ background: "#4f46e5" }}>Add</button>
+                className="flex-1 text-xs rounded-lg px-2.5 py-2 outline-none"
+                style={{ background: "var(--input-bg)", color: "var(--text)", border: "1px solid var(--input-border)" }} />
+              <button onClick={addSubject} className="text-xs px-3 rounded-lg font-semibold text-white"
+                style={{ background: "var(--accent)" }}>Add</button>
             </div>
-            {addError && <p className="text-xs mt-1 px-1" style={{ color: "#f87171" }}>{addError}</p>}
+            {addError && <p className="text-[11px] mt-1.5 px-1" style={{ color: "var(--red)" }}>{addError}</p>}
           </div>
         ) : (
           <button onClick={() => setAdding(true)}
-            className="w-full flex items-center gap-2 text-xs rounded-md px-3 py-2 transition-colors"
-            style={{ color: "var(--sb-text)" }}
-            onMouseEnter={e => (e.currentTarget.style.background = "var(--sb-hover)")}
-            onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-            <FontAwesomeIcon icon={faPlus} className="w-3 h-3" />
-            <span>New subject</span>
+            className="w-full flex items-center gap-2 text-xs rounded-xl px-3 py-2.5 transition-colors"
+            style={{ background: "var(--surface)", border: "1px solid var(--surface-border)", color: "var(--text-dim)" }}
+            onMouseEnter={e => (e.currentTarget.style.background = "var(--surface-hover)")}
+            onMouseLeave={e => (e.currentTarget.style.background = "var(--surface)")}>
+            <FontAwesomeIcon icon={faPlus} className="text-[10px]" />
+            <span className="flex-1 text-left">New subject</span>
+            <Kbd>⌘N</Kbd>
           </button>
         )}
       </div>
 
-      <div className="px-4 mb-1">
-        <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--sb-text)", opacity: 0.5 }}>Subjects</span>
+      {/* Section label */}
+      <div className="px-4 pt-2 pb-1.5 flex items-center justify-between">
+        <span className="text-[10px] font-mono font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--text-faint)" }}>
+          Subjects
+        </span>
+        <span className="text-[10px] font-mono" style={{ color: "var(--text-faint)" }}>
+          {q ? `${visible.length} found` : `${subjects.length} active`}
+        </span>
       </div>
 
-      {/* Subject list */}
-      <nav className="flex-1 overflow-y-auto px-2 space-y-0.5 pb-4">
-        {subjects.map(s => {
+      {/* Subject tree */}
+      <nav className="flex-1 overflow-y-auto px-2 pb-3 space-y-0.5">
+        {visible.map(s => {
           const open = expanded.has(s.id)
           return (
             <div key={s.id}>
               <button onClick={() => toggleSubject(s.id)}
-                className="w-full flex items-center gap-2 rounded-lg px-2 py-2 text-left text-xs transition-colors"
-                style={{ color: open ? "var(--sb-text-bright)" : "var(--sb-text)" }}
-                onMouseEnter={e => (e.currentTarget.style.background = "var(--sb-hover)")}
+                className="w-full flex items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs transition-colors"
+                style={{ color: open ? "var(--text)" : "var(--text-dim)" }}
+                onMouseEnter={e => (e.currentTarget.style.background = "var(--surface-hover)")}
                 onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
                 <FontAwesomeIcon icon={open ? faChevronDown : faChevronRight}
-                  className="w-2.5 h-2.5 shrink-0" style={{ color: "var(--sb-text)" }} />
+                  className="text-[9px] shrink-0" style={{ color: "var(--text-faint)" }} />
                 <span className="truncate flex-1 font-medium">{s.name}</span>
+                {open && <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: "var(--teal)" }} />}
               </button>
 
               {open && (
-                <div className="ml-5 mt-0.5 space-y-0.5">
-                  <SidebarItem label="Materials" icon={<FontAwesomeIcon icon={faPaperclip} className="w-3 h-3" />}
+                <div className="ml-4 mt-0.5 space-y-0.5">
+                  <Item label="Materials" icon={faPaperclip}
                     active={isActive({ type: "materials", subjectId: s.id })}
-                    onClick={() => onNavigate({ type: "materials", subjectId: s.id })} />
-                  <SidebarItem label="AI Tutor" icon={<FontAwesomeIcon icon={faRobot} className="w-3 h-3" />}
+                    onClick={() => go({ type: "materials", subjectId: s.id }, `${s.name} / Materials`)} />
+                  <Item label="AI Tutor" icon={faRobot} badge="Ready"
                     active={isActive({ type: "tutor", subjectId: s.id })}
-                    onClick={() => onNavigate({ type: "tutor", subjectId: s.id })} />
+                    onClick={() => go({ type: "tutor", subjectId: s.id }, `${s.name} / AI Tutor`)} />
                   {(branches[s.id] ?? []).map((b: any) => (
-                    <SidebarItem key={b.id} label={b.title}
-                      icon={<FontAwesomeIcon icon={faFileLines} className="w-3 h-3" />}
+                    <Item key={b.id} label={b.title} icon={faFileLines}
                       active={isActive({ type: "branch", branchId: b.id, subjectId: s.id })}
-                      onClick={() => onNavigate({ type: "branch", branchId: b.id, subjectId: s.id })} />
+                      onClick={() => go({ type: "branch", branchId: b.id, subjectId: s.id }, `${s.name} / ${b.title}`)} />
                   ))}
                   <AddBranchInline onAdd={title => addBranch(s.id, title)} />
                 </div>
@@ -147,18 +213,24 @@ export function Sidebar({ view, onNavigate }: Props) {
             </div>
           )
         })}
-        {subjects.length === 0 && (
-          <p className="text-xs px-3 py-4" style={{ color: "var(--sb-text)", opacity: 0.4 }}>No subjects yet.</p>
+        {visible.length === 0 && (
+          <p className="text-xs px-3 py-5" style={{ color: "var(--text-faint)" }}>
+            {q ? `No subjects match "${query.trim()}".` : "No subjects yet."}
+          </p>
         )}
       </nav>
 
-      {/* Bottom: theme toggle + wallet */}
-      <div className="px-3 py-3 space-y-2" style={{ borderTop: "1px solid var(--sb-border)" }}>
+      {/* Footer */}
+      <div className="px-3 py-3 space-y-2" style={{ borderTop: "1px solid var(--panel-border)" }}>
         <button onClick={toggle}
-          className="w-full flex items-center gap-2 rounded-md px-3 py-2 text-xs transition-colors"
-          style={{ background: "var(--sb-hover)", color: "var(--sb-text)" }}>
-          <FontAwesomeIcon icon={theme === "dark" ? faSun : faMoon} className="w-3 h-3" />
-          <span>{theme === "dark" ? "Light mode" : "Dark mode"}</span>
+          className="w-full flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs transition-colors"
+          style={{ background: "var(--surface)", border: "1px solid var(--surface-border)", color: "var(--text-dim)" }}
+          onMouseEnter={e => (e.currentTarget.style.background = "var(--surface-hover)")}
+          onMouseLeave={e => (e.currentTarget.style.background = "var(--surface)")}>
+          <FontAwesomeIcon icon={theme === "dark" ? faSun : faMoon}
+            className="text-[10px]" style={{ color: "var(--amber)" }} />
+          <span className="flex-1 text-left">{theme === "dark" ? "Light mode" : "Dark mode"}</span>
+          <Kbd>⌘L</Kbd>
         </button>
         <ConnectButton compact />
       </div>
@@ -166,21 +238,27 @@ export function Sidebar({ view, onNavigate }: Props) {
   )
 }
 
-function SidebarItem({ label, icon, active, onClick }: {
-  label: string; icon: React.ReactNode; active: boolean; onClick: () => void
+function Item({ label, icon, badge, active, onClick }: {
+  label: string
+  icon: typeof faPaperclip
+  badge?: string
+  active: boolean
+  onClick: () => void
 }) {
   return (
     <button onClick={onClick}
-      className="w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors"
+      className="w-full flex items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs transition-all"
       style={{
-        background: active ? "var(--sb-active)" : "transparent",
-        color: active ? "var(--sb-active-text)" : "var(--sb-text)",
-        border: active ? "1px solid rgba(99,102,241,0.2)" : "1px solid transparent",
+        background: active ? "var(--accent-soft)" : "transparent",
+        color: active ? "var(--accent-bright)" : "var(--text-dim)",
+        border: `1px solid ${active ? "var(--accent-border)" : "transparent"}`,
+        boxShadow: active ? "0 0 14px var(--accent-soft)" : "none",
       }}
-      onMouseEnter={e => { if (!active) e.currentTarget.style.background = "var(--sb-hover)" }}
+      onMouseEnter={e => { if (!active) e.currentTarget.style.background = "var(--surface-hover)" }}
       onMouseLeave={e => { if (!active) e.currentTarget.style.background = "transparent" }}>
-      <span className="shrink-0 w-3 flex justify-center">{icon}</span>
-      <span className="truncate">{label}</span>
+      <FontAwesomeIcon icon={icon} className="text-[10px] shrink-0 w-3" />
+      <span className="truncate flex-1">{label}</span>
+      {badge && active && <Pill tone="accent">{badge}</Pill>}
     </button>
   )
 }
@@ -199,25 +277,25 @@ function AddBranchInline({ onAdd }: { onAdd: (title: string) => Promise<void> })
   if (!open)
     return (
       <button onClick={() => setOpen(true)}
-        className="w-full flex items-center gap-1.5 rounded-md px-2 py-1 text-xs"
-        style={{ color: "var(--sb-text)", opacity: 0.5 }}
-        onMouseEnter={e => (e.currentTarget.style.opacity = "1")}
-        onMouseLeave={e => (e.currentTarget.style.opacity = "0.5")}>
-        <FontAwesomeIcon icon={faPlus} className="w-2.5 h-2.5" />
+        className="w-full flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs transition-opacity"
+        style={{ color: "var(--text-faint)" }}
+        onMouseEnter={e => (e.currentTarget.style.color = "var(--text-dim)")}
+        onMouseLeave={e => (e.currentTarget.style.color = "var(--text-faint)")}>
+        <FontAwesomeIcon icon={faPlus} className="text-[9px] w-3" />
         <span>Add assignment</span>
       </button>
     )
 
   return (
-    <div className="flex gap-1 pr-1">
+    <div className="flex gap-1.5 pr-1">
       <input autoFocus value={title} onChange={e => setTitle(e.target.value)}
         onKeyDown={e => { if (e.key === "Enter") submit(); if (e.key === "Escape") setOpen(false) }}
         placeholder="Assignment name…"
-        className="flex-1 text-xs rounded px-1.5 py-1 outline-none"
-        style={{ background: "var(--sb-input-bg)", color: "var(--sb-text-bright)", border: "1px solid var(--sb-input-border)" }} />
-      <button onClick={submit} className="text-xs px-1.5 rounded flex items-center"
-        style={{ background: "#4f46e5", color: "white" }}>
-        <FontAwesomeIcon icon={faCheck} className="w-3 h-3" />
+        className="flex-1 text-xs rounded-lg px-2 py-1.5 outline-none"
+        style={{ background: "var(--input-bg)", color: "var(--text)", border: "1px solid var(--input-border)" }} />
+      <button onClick={submit} className="text-xs px-2 rounded-lg flex items-center text-white"
+        style={{ background: "var(--accent)" }}>
+        <FontAwesomeIcon icon={faCheck} className="text-[10px]" />
       </button>
     </div>
   )
