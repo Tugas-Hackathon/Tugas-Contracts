@@ -176,6 +176,44 @@ app.get("/session/:user/messages", async (req, res) => {
   }
 })
 
+app.get("/session/:user/debug", async (req, res) => {
+  const s = session(req.params.user)
+  if (s.state !== "ready") return res.status(409).json({ error: "not linked", state: s.state })
+  try {
+    const frames = []
+    for (const f of s.client.pupPage.frames()) {
+      let probe
+      try {
+        probe = await f.evaluate(async () => {
+          const out = {
+            hasStore: typeof window.Store !== "undefined",
+            hasWWebJS: typeof window.WWebJS !== "undefined",
+          }
+          try {
+            const chats = await window.WWebJS.getChats()
+            out.wwebjsGetChats = `ok, ${chats.length} chats`
+          } catch (e) {
+            out.wwebjsGetChats = `THREW: ${e?.message ?? e}`
+          }
+          try {
+            const raw = window.Store?.Chat?.getModelsArray?.()
+            out.rawModels = raw ? `${raw.length} models` : "Store.Chat missing"
+          } catch (e) {
+            out.rawModels = `THREW: ${e?.message ?? e}`
+          }
+          return out
+        })
+      } catch (e) {
+        probe = { evalError: e?.message ?? String(e) }
+      }
+      frames.push({ url: f.url().slice(0, 80), name: f.name(), ...probe })
+    }
+    res.json({ frameCount: frames.length, frames })
+  } catch (e) {
+    res.status(502).json({ error: e?.message ?? String(e) })
+  }
+})
+
 app.post("/session/:user/logout", async (req, res) => {
   const s = session(req.params.user)
   try {
