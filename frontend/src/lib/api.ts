@@ -18,15 +18,19 @@ async function req(method: string, path: string, body?: unknown) {
   return r.json()
 }
 
-// FastAPI errors arrive as {"detail": "..."}; show the message, not the envelope.
+// FastAPI wraps errors as {"detail": ...}, and a proxied sidecar error arrives
+// as JSON nested inside that detail string — so unwrap repeatedly.
 async function errorText(r: Response) {
-  const body = await r.text()
-  try {
-    const parsed = JSON.parse(body)
-    const d = parsed?.detail ?? parsed?.error
-    if (typeof d === "string") return d
-  } catch { /* not JSON */ }
-  return body || `Request failed (${r.status})`
+  let text = await r.text()
+  for (let i = 0; i < 3; i++) {
+    try {
+      const parsed = JSON.parse(text)
+      const inner = parsed?.detail ?? parsed?.error ?? parsed?.message
+      if (typeof inner !== "string") break
+      text = inner
+    } catch { break }
+  }
+  return text || `Request failed (${r.status})`
 }
 
 async function blobUrl(mid: number) {

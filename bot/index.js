@@ -89,18 +89,36 @@ app.get("/session/:user/groups", async (req, res) => {
   const s = session(req.params.user)
   if (s.state !== "ready") return res.status(409).json({ error: "not linked", state: s.state })
   try {
-    const chats = await s.client.getChats()
-    res.json(
-      chats
-        .filter(c => c.isGroup)
-        .map(c => ({
-          id: c.id._serialized,
-          name: c.name,
-          participants: c.participants?.length ?? 0,
-        }))
-    )
+    let out
+    try {
+      const chats = await s.client.getChats()
+      out = chats.filter(c => c.isGroup).map(c => ({
+        id: c.id?._serialized ?? String(c.id),
+        name: c.name ?? "(unnamed group)",
+        participants: c.participants?.length ?? 0,
+      }))
+    } catch (e) {
+      // getChats builds a full Chat model per conversation and throws from
+      // WhatsApp Web's minified internals when that shape drifts. The raw
+      // store still holds what we need, so read it directly.
+      console.warn("getChats failed (%s) — falling back to Store", e?.message ?? e)
+      out = await s.client.pupPage.evaluate(() => {
+        const chat = window.Store?.Chat
+        if (!chat?.getModelsArray) throw new Error("Store.Chat unavailable")
+        return chat.getModelsArray()
+          .filter(c => c.id?.server === "g.us" || c.isGroup)
+          .map(c => ({
+            id: c.id?._serialized ?? String(c.id),
+            name: c.formattedTitle || c.name || "(unnamed group)",
+            participants: c.groupMetadata?.participants?.length ?? 0,
+          }))
+      })
+    }
+    console.log(`groups: ${out.length}`)
+    res.json(out)
   } catch (e) {
-    res.status(502).json({ error: e?.message ?? String(e) })
+    console.error("groups failed:", e?.stack ?? e)
+    res.status(502).json({ error: e?.message ? `groups: ${e.message}` : String(e) })
   }
 })
 
