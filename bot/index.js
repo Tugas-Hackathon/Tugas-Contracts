@@ -117,7 +117,8 @@ app.get("/session/:user/groups", async (req, res) => {
 
         const dbs = await indexedDB.databases()
         const found = []
-        const meta = new Map()   // chat id -> { subject, participants }
+        const meta = new Map()    // id      -> { subject, size }
+        const counts = new Map()  // groupId -> participant count
 
         for (const { name } of dbs) {
           if (!name) continue
@@ -125,31 +126,36 @@ app.get("/session/:user/groups", async (req, res) => {
           try { db = await open(name) } catch { continue }
           const stores = [...db.objectStoreNames]
 
-          // Group subjects live apart from the chat rows, so collect them first.
-          for (const s of stores.filter(n => /group.*metadata|metadata.*group/i.test(n))) {
+          // group-metadata carries the subject and a `size` member count.
+          if (stores.includes("group-metadata")) {
             let rows = []
-            try { rows = await readAll(db, s) } catch { continue }
+            try { rows = await readAll(db, "group-metadata") } catch { rows = [] }
             for (const g of rows) {
               const id = typeof g?.id === "string" ? g.id : g?.id?._serialized
-              if (typeof id === "string") {
-                meta.set(id, { subject: g.subject, participants: g.participants?.length ?? 0 })
+              if (typeof id === "string") meta.set(id, { subject: g.subject, size: g.size })
+            }
+          }
+
+          // `participant` holds the real roster, keyed by groupId — authoritative
+          // where `size` is stale or absent.
+          if (stores.includes("participant")) {
+            let rows = []
+            try { rows = await readAll(db, "participant") } catch { rows = [] }
+            for (const p of rows) {
+              const gid = typeof p?.groupId === "string" ? p.groupId : p?.groupId?._serialized
+              if (typeof gid === "string" && Array.isArray(p.participants)) {
+                counts.set(gid, p.participants.length)
               }
             }
           }
 
-          const chatStore = stores.find(n => n.toLowerCase() === "chat")
-          if (chatStore) {
+          if (stores.includes("chat")) {
             let rows = []
-            try { rows = await readAll(db, chatStore) } catch { /* unreadable */ }
+            try { rows = await readAll(db, "chat") } catch { rows = [] }
             for (const c of rows) {
               const id = typeof c?.id === "string" ? c.id : c?.id?._serialized
               if (typeof id !== "string" || !id.endsWith("@g.us")) continue
-              const m = meta.get(id)
-              found.push({
-                id,
-                name: c.name || c.subject || m?.subject || null,
-                participants: m?.participants ?? 0,
-              })
+              found.push({ id, name: c.name || meta.get(id)?.subject || null })
             }
           }
           db.close()
@@ -165,7 +171,11 @@ app.get("/session/:user/groups", async (req, res) => {
           if (!prev || (!prev.name && g.name)) byId.set(g.id, g)
         }
         return [...byId.values()]
-          .map(g => ({ ...g, name: g.name || meta.get(g.id)?.subject || `Group ${g.id.slice(0, 8)}` }))
+          .map(g => ({
+            id: g.id,
+            name: g.name || meta.get(g.id)?.subject || `Group ${g.id.slice(0, 8)}`,
+            participants: counts.get(g.id) ?? meta.get(g.id)?.size ?? 0,
+          }))
           .sort((a, b) => a.name.localeCompare(b.name))
       })
     }
@@ -240,23 +250,32 @@ app.get("/session/:user/debug", async (req, res) => {
       let probe
       try {
         probe = await f.evaluate(async () => {
-          const out = {
-            hasStore: typeof window.Store !== "undefined",
-            hasWWebJS: typeof window.WWebJS !== "undefined",
+          const open = name => new Promise((res, rej) => {
+            const r = indexedDB.open(name)
+            r.onsuccess = () => res(r.result)
+            r.onerror = () => rej(r.error)
+          })
+          const readSome = (db, store, n) => new Promise(res => {
+            const rq = db.transaction(store, "readonly").objectStore(store).getAll(undefined, n)
+            rq.onsuccess = () => res(rq.result)
+            rq.onerror = () => res([])
+          })
+
+          const dbs = await indexedDB.databases()
+          const map = {}
+          for (const { name } of dbs) {
+            if (!name) continue
+            let db
+            try { db = await open(name) } catch { continue }
+            const stores = [...db.objectStoreNames]
+            map[name] = {}
+            for (const s of stores) {
+              const rows = await readSome(db, s, 1)
+              map[name][s] = rows.length ? Object.keys(rows[0]).slice(0, 30) : "(empty)"
+            }
+            db.close()
           }
-          try {
-            const chats = await window.WWebJS.getChats()
-            out.wwebjsGetChats = `ok, ${chats.length} chats`
-          } catch (e) {
-            out.wwebjsGetChats = `THREW: ${e?.message ?? e}`
-          }
-          try {
-            const raw = window.Store?.Chat?.getModelsArray?.()
-            out.rawModels = raw ? `${raw.length} models` : "Store.Chat missing"
-          } catch (e) {
-            out.rawModels = `THREW: ${e?.message ?? e}`
-          }
-          return out
+          return { dbs: map }
         })
       } catch (e) {
         probe = { evalError: e?.message ?? String(e) }
