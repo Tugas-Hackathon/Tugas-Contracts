@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import { faWandMagicSparkles, faRotate } from "@fortawesome/free-solid-svg-icons"
+import { faWandMagicSparkles, faRotate, faFileArrowUp } from "@fortawesome/free-solid-svg-icons"
 import { api } from "../lib/api"
 import { MilestoneCard } from "../components/MilestoneCard"
 import { ChatBox } from "../components/ChatBox"
@@ -9,20 +9,27 @@ import { Pill } from "../App"
 export function BranchPage({ id }: { id: number; onBack?: () => void }) {
   const [branch, setBranch] = useState<any>(null)
   const [milestones, setMilestones] = useState<any[]>([])
-  const [tab, setTab] = useState<"milestones" | "outline" | "chat">("milestones")
+  const [tab, setTab] = useState<"milestones" | "chat">("milestones")
   const [milestoneTitle, setMilestoneTitle] = useState("")
-  const [outline, setOutline] = useState<any>(null)
   const [brief, setBrief] = useState("")
-  const [loadingOutline, setLoadingOutline] = useState(false)
   const [planning, setPlanning] = useState(false)
   const [planError, setPlanError] = useState("")
   const [manual, setManual] = useState(false)
+  const briefFileRef = useRef<HTMLInputElement>(null)
 
   async function generatePlan() {
     if (!brief.trim()) return
+    await runPlan(() => api.planBranch(id, brief.trim()))
+  }
+
+  async function generatePlanFromFile(file: File) {
+    await runPlan(() => api.planBranchFile(id, file))
+  }
+
+  async function runPlan(call: () => Promise<any>) {
     setPlanning(true); setPlanError("")
     try {
-      const res = await api.planBranch(id, brief.trim())
+      const res = await call()
       setMilestones(res.milestones)
     } catch (e: any) {
       setPlanError(e.message)
@@ -43,21 +50,8 @@ export function BranchPage({ id }: { id: number; onBack?: () => void }) {
     setMilestoneTitle("")
   }
 
-  async function generateOutline() {
-    if (!brief.trim()) return
-    setLoadingOutline(true)
-    try {
-      setOutline(await api.outline(id, brief.trim()))
-    } catch (e: any) {
-      alert(e.message)
-    } finally {
-      setLoadingOutline(false)
-    }
-  }
-
   const tabs = [
     { key: "milestones", label: "Milestones" },
-    { key: "outline", label: "AI Outline" },
     { key: "chat", label: "Discussion" },
   ] as const
 
@@ -106,8 +100,31 @@ export function BranchPage({ id }: { id: number; onBack?: () => void }) {
 
               <textarea value={brief} onChange={e => setBrief(e.target.value)}
                 rows={5} placeholder="Paste your assignment brief or question here…"
-                className="w-full rounded-xl px-4 py-3 text-sm resize-none outline-none mb-3"
+                disabled={planning}
+                className="w-full rounded-xl px-4 py-3 text-sm resize-none outline-none mb-3 disabled:opacity-60"
                 style={{ background: "var(--input-bg)", color: "var(--text)", border: "1px solid var(--input-border)" }} />
+
+              <div className="flex items-center gap-2 mb-4">
+                <div className="flex-1 h-px" style={{ background: "var(--surface-border)" }} />
+                <span className="text-[10px] font-mono uppercase tracking-wider" style={{ color: "var(--text-faint)" }}>
+                  or upload the brief
+                </span>
+                <div className="flex-1 h-px" style={{ background: "var(--surface-border)" }} />
+              </div>
+
+              <input type="file" ref={briefFileRef} className="hidden"
+                accept=".pdf,.docx,.txt,.md"
+                onChange={e => {
+                  const f = e.target.files?.[0]
+                  if (f) generatePlanFromFile(f)
+                  if (briefFileRef.current) briefFileRef.current.value = ""
+                }} />
+              <button onClick={() => briefFileRef.current?.click()} disabled={planning}
+                className="w-full rounded-xl px-4 py-3 text-sm mb-4 disabled:opacity-50 transition-colors"
+                style={{ background: "var(--input-bg)", border: "1px dashed var(--input-border)", color: "var(--text-dim)" }}>
+                <FontAwesomeIcon icon={faFileArrowUp} className="text-xs mr-2" />
+                Choose a PDF or Word file
+              </button>
 
               <div className="flex items-center gap-3">
                 <button onClick={generatePlan} disabled={planning || !brief.trim()}
@@ -160,55 +177,6 @@ export function BranchPage({ id }: { id: number; onBack?: () => void }) {
                 style={{ background: "var(--surface)", border: "1px solid var(--surface-border)", color: "var(--text)" }}>
                 Add
               </button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {tab === "outline" && (
-        <div>
-          <label className="block text-[10px] font-mono uppercase tracking-[0.15em] mb-2"
-            style={{ color: "var(--text-faint)" }}>
-            Assignment brief
-          </label>
-          <textarea value={brief} onChange={e => setBrief(e.target.value)}
-            rows={4} placeholder="Paste your assignment instructions here…"
-            className="w-full rounded-xl px-4 py-3 text-sm resize-none outline-none"
-            style={{ background: "var(--input-bg)", color: "var(--text)", border: "1px solid var(--input-border)" }} />
-          <button onClick={generateOutline} disabled={loadingOutline || !brief.trim()}
-            className="mt-3 px-5 py-2.5 rounded-xl text-sm font-medium text-white disabled:opacity-40 transition-all"
-            style={{ background: "linear-gradient(135deg,#8b5cf6,#6d28d9)", boxShadow: "0 0 18px var(--accent-glow)" }}>
-            {loadingOutline ? "Generating…" : "Generate outline"}
-          </button>
-
-          {outline && (
-            <div className="mt-6 rounded-2xl p-5"
-              style={{ background: "var(--surface)", border: "1px solid var(--surface-border)" }}>
-              <div className="flex items-center gap-2 mb-4">
-                <h3 className="text-sm font-semibold" style={{ color: "var(--text)" }}>Suggested outline</h3>
-                <Pill tone="teal">AI</Pill>
-              </div>
-              <ol className="space-y-4">
-                {outline.sections?.map((s: any, i: number) => (
-                  <li key={i} className="flex gap-3">
-                    <span className="shrink-0 w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-mono"
-                      style={{
-                        background: "var(--accent-soft)", border: "1px solid var(--accent-border)",
-                        color: "var(--accent-bright)",
-                      }}>
-                      {i + 1}
-                    </span>
-                    <div className="flex-1">
-                      <div className="font-medium text-sm mb-1" style={{ color: "var(--text)" }}>{s.title}</div>
-                      <ul className="space-y-1">
-                        {s.points?.map((p: string, j: number) => (
-                          <li key={j} className="text-xs leading-relaxed" style={{ color: "var(--text-dim)" }}>· {p}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  </li>
-                ))}
-              </ol>
             </div>
           )}
         </div>

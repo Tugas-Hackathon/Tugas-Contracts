@@ -79,6 +79,17 @@ export const api = {
     req("POST", `/branches/${bid}/outline`, { brief }),
   planBranch: (bid: number, brief: string) =>
     req("POST", `/branches/${bid}/plan`, { brief }),
+  planBranchFile: async (bid: number, file: File) => {
+    const fd = new FormData()
+    fd.append("file", file)
+    const r = await fetch(`${BASE}/branches/${bid}/plan-file`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token()}` },
+      body: fd,
+    })
+    if (!r.ok) throw new Error(await errorText(r))
+    return r.json()
+  },
   rubricCheck: (bid: number, draft: string) =>
     req("POST", `/branches/${bid}/rubric-check`, { draft }),
 

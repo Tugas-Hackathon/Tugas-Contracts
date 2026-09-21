@@ -1,9 +1,15 @@
-from fastapi import APIRouter, HTTPException, Depends
+import tempfile
+from pathlib import Path
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
 from pydantic import BaseModel
 from typing import Optional
 from db import get_db
 from auth import current_user
 from llm import parse, LLMDeclined
+from materials import _extract_text
+
+PLAN_EXTS = {".pdf", ".docx", ".txt", ".md"}
+MAX_BRIEF_BYTES = 10 * 1024 * 1024
 
 router = APIRouter()
 
@@ -156,6 +162,42 @@ class PlanBody(BaseModel):
 
 @router.post("/branches/{branch_id}/plan")
 def plan(branch_id: int, body: PlanBody, user: str = Depends(current_user)):
+    return _plan(branch_id, body.brief, user)
+
+
+@router.post("/branches/{branch_id}/plan-file")
+async def plan_from_file(
+    branch_id: int,
+    file: UploadFile = File(...),
+    user: str = Depends(current_user),
+):
+    ext = Path(file.filename or "").suffix.lower()
+    if ext not in PLAN_EXTS:
+        raise HTTPException(422, f"file type not allowed: {ext or 'unknown'}")
+
+    data = await file.read()
+    if len(data) > MAX_BRIEF_BYTES:
+        raise HTTPException(422, "file too large (max 10 MB)")
+
+    # _extract_text reads from disk, so stage the upload in a temp file that
+    # goes away regardless of how extraction ends.
+    with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
+        tmp.write(data)
+        tmp_path = Path(tmp.name)
+    try:
+        text, _ = _extract_text(tmp_path, ext)
+    except Exception as e:
+        raise HTTPException(422, f"could not read this file: {e}")
+    finally:
+        tmp_path.unlink(missing_ok=True)
+
+    if not text.strip():
+        raise HTTPException(422, "no text found in that file")
+
+    return _plan(branch_id, text, user)
+
+
+def _plan(branch_id: int, brief: str, user: str):
     with get_db() as db:
         br = db.execute(
             "SELECT id,title,kind,due_at FROM branches WHERE id=? AND user_id=?",
@@ -168,6 +210,7 @@ def plan(branch_id: int, body: PlanBody, user: str = Depends(current_user)):
             (branch_id, user),
         ).fetchone()[0]
 
+    body = PlanBody(brief=brief)
     prompt = (
         f"Break this {br['kind']} into 4 to 6 milestones a student works through in order.\n\n"
         f"TITLE: {br['title']}\n"
