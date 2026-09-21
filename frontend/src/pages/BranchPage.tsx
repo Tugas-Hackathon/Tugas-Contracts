@@ -16,6 +16,7 @@ export function BranchPage({ id }: { id: number; onBack?: () => void }) {
   const [planError, setPlanError] = useState("")
   const [manual, setManual] = useState(false)
   const briefFileRef = useRef<HTMLInputElement>(null)
+  const [dragging, setDragging] = useState(false)
 
   async function generatePlan() {
     if (!brief.trim()) return
@@ -119,12 +120,32 @@ export function BranchPage({ id }: { id: number; onBack?: () => void }) {
                   if (f) generatePlanFromFile(f)
                   if (briefFileRef.current) briefFileRef.current.value = ""
                 }} />
-              <button onClick={() => briefFileRef.current?.click()} disabled={planning}
-                className="w-full rounded-xl px-4 py-3 text-sm mb-4 disabled:opacity-50 transition-colors"
-                style={{ background: "var(--input-bg)", border: "1px dashed var(--input-border)", color: "var(--text-dim)" }}>
-                <FontAwesomeIcon icon={faFileArrowUp} className="text-xs mr-2" />
-                Choose a PDF or Word file
-              </button>
+              <div
+                onClick={() => !planning && briefFileRef.current?.click()}
+                onDragOver={e => { e.preventDefault(); if (!planning) setDragging(true) }}
+                onDragLeave={() => setDragging(false)}
+                onDrop={e => {
+                  e.preventDefault()
+                  setDragging(false)
+                  if (planning) return
+                  const f = e.dataTransfer.files?.[0]
+                  if (!f) return
+                  if (!/\.(pdf|docx|txt|md)$/i.test(f.name)) {
+                    setPlanError(`${f.name} isn't a PDF, Word, txt or md file.`)
+                    return
+                  }
+                  generatePlanFromFile(f)
+                }}
+                className="w-full rounded-xl px-4 py-6 text-sm mb-4 text-center cursor-pointer transition-all"
+                style={{
+                  background: dragging ? "var(--accent-soft)" : "var(--input-bg)",
+                  border: `1px dashed ${dragging ? "var(--accent-bright)" : "var(--input-border)"}`,
+                  color: dragging ? "var(--accent-bright)" : "var(--text-dim)",
+                  opacity: planning ? 0.5 : 1,
+                }}>
+                <FontAwesomeIcon icon={faFileArrowUp} className="text-base mb-2 block mx-auto" />
+                {dragging ? "Drop it here" : "Drop a PDF or Word file here, or click to browse"}
+              </div>
 
               <div className="flex items-center gap-3">
                 <button onClick={generatePlan} disabled={planning || !brief.trim()}

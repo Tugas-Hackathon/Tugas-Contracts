@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import {
   faWandMagicSparkles, faFileLines, faDownload, faTrash,
-  faBell, faSliders, faRobot, faPaperclip, faLink,
+  faBell, faSliders, faRobot, faPaperclip, faLink, faFileArrowUp,
 } from "@fortawesome/free-solid-svg-icons"
 import { useAuth } from "./hooks/useAuth"
 import { useTheme, vars } from "./contexts/theme"
@@ -243,19 +243,23 @@ function Home({ onNavigate }: { onNavigate: (v: View) => void }) {
 function MaterialsView({ subjectId }: { subjectId: number }) {
   const [materials, setMaterials] = useState<any[]>([])
   const [uploading, setUploading] = useState(false)
+  const [dragging, setDragging] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => { api.materials(subjectId).then(setMaterials) }, [subjectId])
 
-  async function upload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
+  async function send(file: File) {
     setUploading(true)
     try {
       const m = await api.uploadMaterial(subjectId, file)
       setMaterials(p => [m, ...p])
     } catch (err: any) { alert(err.message) }
     finally { setUploading(false); if (fileRef.current) fileRef.current.value = "" }
+  }
+
+  function upload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (file) send(file)
   }
 
   async function remove(id: number) {
@@ -278,11 +282,27 @@ function MaterialsView({ subjectId }: { subjectId: number }) {
 
       <input type="file" ref={fileRef} onChange={upload} className="hidden"
         accept=".pdf,.pptx,.docx,.txt,.md,.png,.jpg,.jpeg" />
-      <button onClick={() => fileRef.current?.click()} disabled={uploading}
-        className="mb-7 px-4 py-2.5 rounded-xl text-sm font-medium disabled:opacity-50 transition-colors"
-        style={{ background: "var(--accent-soft)", border: "1px solid var(--accent-border)", color: "var(--accent-bright)" }}>
-        {uploading ? "Uploading…" : "Upload file"}
-      </button>
+      <div
+        onClick={() => !uploading && fileRef.current?.click()}
+        onDragOver={e => { e.preventDefault(); if (!uploading) setDragging(true) }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={e => {
+          e.preventDefault()
+          setDragging(false)
+          if (uploading) return
+          const f = e.dataTransfer.files?.[0]
+          if (f) send(f)
+        }}
+        className="mb-7 rounded-xl px-4 py-7 text-sm text-center cursor-pointer transition-all"
+        style={{
+          background: dragging ? "var(--accent-soft)" : "var(--surface)",
+          border: `1px dashed ${dragging ? "var(--accent-bright)" : "var(--surface-border)"}`,
+          color: dragging ? "var(--accent-bright)" : "var(--text-dim)",
+          opacity: uploading ? 0.6 : 1,
+        }}>
+        <FontAwesomeIcon icon={faFileArrowUp} className="text-base mb-2 block mx-auto" />
+        {uploading ? "Uploading…" : dragging ? "Drop it here" : "Drop a file here, or click to browse"}
+      </div>
 
       <div className="space-y-2.5">
         {materials.map(m => (
