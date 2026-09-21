@@ -138,3 +138,67 @@ def delete_branch(branch_id: int, user: str = Depends(current_user)):
         # anchored stays on-chain — that record is not ours to remove.
         db.execute("DELETE FROM milestones WHERE branch_id=? AND user_id=?", (branch_id, user))
         db.execute("DELETE FROM branches WHERE id=? AND user_id=?", (branch_id, user))
+
+
+class PlannedMilestone(BaseModel):
+    title: str
+    detail: str
+    day_offset: int          # days from start; lets the UI space the work out
+
+
+class PlanResult(BaseModel):
+    milestones: list[PlannedMilestone]
+
+
+class PlanBody(BaseModel):
+    brief: str
+
+
+@router.post("/branches/{branch_id}/plan")
+def plan(branch_id: int, body: PlanBody, user: str = Depends(current_user)):
+    with get_db() as db:
+        br = db.execute(
+            "SELECT id,title,kind,due_at FROM branches WHERE id=? AND user_id=?",
+            (branch_id, user),
+        ).fetchone()
+        if not br:
+            raise HTTPException(404, "branch not found")
+        existing = db.execute(
+            "SELECT COUNT(*) FROM milestones WHERE branch_id=? AND user_id=?",
+            (branch_id, user),
+        ).fetchone()[0]
+
+    prompt = (
+        f"Break this {br['kind']} into 4 to 6 milestones a student works through in order.\n\n"
+        f"TITLE: {br['title']}\n"
+        f"BRIEF:\n{body.brief}\n\n"
+        "Each milestone is a concrete piece of work that produces something writable — a draft "
+        "section, a dataset, a set of notes — not a vague stage like 'do research'. The student "
+        "will paste what they produced at each one, so every milestone must have a tangible "
+        "output.\n\n"
+        "title: short, imperative, under 60 characters.\n"
+        "detail: one sentence on what to produce and what 'done' looks like.\n"
+        "day_offset: days from starting, spacing the work realistically and leaving room to "
+        "revise before the end."
+    )
+
+    try:
+        result = parse("plan", prompt, PlanResult)
+    except LLMDeclined as e:
+        raise HTTPException(502, f"Could not plan this assignment: {e}")
+
+    created = []
+    with get_db() as db:
+        for m in result.milestones:
+            cur = db.execute(
+                "INSERT INTO milestones(branch_id,user_id,title) VALUES(?,?,?) "
+                "RETURNING id,branch_id,title,work_hash,context_hash,ai_assist_level,"
+                "chain_commit_id,tx_hash,created_at",
+                (branch_id, user, m.title),
+            )
+            row = _row(cur.fetchone())
+            row["detail"] = m.detail
+            row["day_offset"] = m.day_offset
+            created.append(row)
+
+    return {"milestones": created, "replaced_none": existing == 0}

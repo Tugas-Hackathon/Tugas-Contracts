@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react"
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
+import { faWandMagicSparkles, faRotate } from "@fortawesome/free-solid-svg-icons"
 import { api } from "../lib/api"
 import { MilestoneCard } from "../components/MilestoneCard"
 import { ChatBox } from "../components/ChatBox"
@@ -12,6 +14,22 @@ export function BranchPage({ id }: { id: number; onBack?: () => void }) {
   const [outline, setOutline] = useState<any>(null)
   const [brief, setBrief] = useState("")
   const [loadingOutline, setLoadingOutline] = useState(false)
+  const [planning, setPlanning] = useState(false)
+  const [planError, setPlanError] = useState("")
+  const [manual, setManual] = useState(false)
+
+  async function generatePlan() {
+    if (!brief.trim()) return
+    setPlanning(true); setPlanError("")
+    try {
+      const res = await api.planBranch(id, brief.trim())
+      setMilestones(res.milestones)
+    } catch (e: any) {
+      setPlanError(e.message)
+    } finally {
+      setPlanning(false)
+    }
+  }
 
   useEffect(() => {
     api.branch(id).then(setBranch)
@@ -72,24 +90,78 @@ export function BranchPage({ id }: { id: number; onBack?: () => void }) {
 
       {tab === "milestones" && (
         <div>
-          <div className="flex gap-2 mb-5">
-            <input value={milestoneTitle} onChange={e => setMilestoneTitle(e.target.value)}
-              placeholder="New milestone…"
-              className="flex-1 rounded-xl px-4 py-2.5 text-sm outline-none"
-              style={{ background: "var(--input-bg)", color: "var(--text)", border: "1px solid var(--input-border)" }}
-              onKeyDown={e => e.key === "Enter" && addMilestone()} />
-            <button onClick={addMilestone}
-              className="px-5 rounded-xl text-sm font-medium text-white transition-all"
-              style={{ background: "linear-gradient(135deg,#8b5cf6,#6d28d9)", boxShadow: "0 0 18px var(--accent-glow)" }}>
-              Add
-            </button>
-          </div>
-          <div className="space-y-3.5">
-            {milestones.map(m => <MilestoneCard key={m.id} milestone={m} />)}
-            {milestones.length === 0 && (
-              <p className="text-sm text-center py-12" style={{ color: "var(--text-faint)" }}>No milestones yet.</p>
-            )}
-          </div>
+          {milestones.length === 0 ? (
+            <div className="rounded-2xl p-7"
+              style={{ background: "var(--surface)", border: "1px solid var(--surface-border)" }}>
+              <div className="flex items-center gap-2 mb-2">
+                <FontAwesomeIcon icon={faWandMagicSparkles} style={{ color: "var(--accent-bright)" }} />
+                <h3 className="text-base font-semibold" style={{ color: "var(--text)" }}>
+                  Let Tugas plan this for you
+                </h3>
+              </div>
+              <p className="text-sm mb-5" style={{ color: "var(--text-dim)" }}>
+                Paste the assignment brief and Tugas breaks it into milestones — each one a
+                concrete piece of work. You review them, adjust what you want, then work through.
+              </p>
+
+              <textarea value={brief} onChange={e => setBrief(e.target.value)}
+                rows={5} placeholder="Paste your assignment brief or question here…"
+                className="w-full rounded-xl px-4 py-3 text-sm resize-none outline-none mb-3"
+                style={{ background: "var(--input-bg)", color: "var(--text)", border: "1px solid var(--input-border)" }} />
+
+              <div className="flex items-center gap-3">
+                <button onClick={generatePlan} disabled={planning || !brief.trim()}
+                  className="px-5 py-2.5 rounded-xl text-sm font-medium text-white disabled:opacity-40 transition-all"
+                  style={{ background: "linear-gradient(135deg,#8b5cf6,#6d28d9)", boxShadow: "0 0 18px var(--accent-glow)" }}>
+                  <FontAwesomeIcon icon={planning ? faRotate : faWandMagicSparkles}
+                    className={`text-xs mr-2 ${planning ? "animate-spin" : ""}`} />
+                  {planning ? "Planning…" : "Generate milestones"}
+                </button>
+                <button onClick={() => setManual(true)} className="text-xs hover:underline"
+                  style={{ color: "var(--text-dim)" }}>
+                  or add them myself
+                </button>
+              </div>
+
+              {planError && <p className="text-xs mt-4" style={{ color: "var(--red)" }}>{planError}</p>}
+            </div>
+          ) : (
+            <div className="space-y-3.5">
+              {milestones.map((m, i) => (
+                <div key={m.id}>
+                  {m.detail && (
+                    <div className="flex items-start gap-2 mb-1.5 px-1">
+                      <span className="text-[10px] font-mono mt-0.5 shrink-0" style={{ color: "var(--accent-bright)" }}>
+                        {String(i + 1).padStart(2, "0")}
+                      </span>
+                      <span className="text-xs flex-1" style={{ color: "var(--text-dim)" }}>{m.detail}</span>
+                      {typeof m.day_offset === "number" && (
+                        <span className="text-[10px] font-mono shrink-0" style={{ color: "var(--text-faint)" }}>
+                          day {m.day_offset}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  <MilestoneCard milestone={m} />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {(milestones.length > 0 || manual) && (
+            <div className="flex gap-2 mt-5">
+              <input value={milestoneTitle} onChange={e => setMilestoneTitle(e.target.value)}
+                placeholder="Add another milestone…"
+                className="flex-1 rounded-xl px-4 py-2.5 text-sm outline-none"
+                style={{ background: "var(--input-bg)", color: "var(--text)", border: "1px solid var(--input-border)" }}
+                onKeyDown={e => e.key === "Enter" && addMilestone()} />
+              <button onClick={addMilestone}
+                className="px-5 rounded-xl text-sm font-medium transition-all"
+                style={{ background: "var(--surface)", border: "1px solid var(--surface-border)", color: "var(--text)" }}>
+                Add
+              </button>
+            </div>
+          )}
         </div>
       )}
 
