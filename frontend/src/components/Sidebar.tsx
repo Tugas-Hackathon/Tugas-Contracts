@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import {
   faChevronDown, faChevronRight, faPlus, faCheck,
   faPaperclip, faRobot, faFileLines, faSun, faMoon,
-  faMagnifyingGlass, faXmark,
+  faMagnifyingGlass, faXmark, faTrash,
 } from "@fortawesome/free-solid-svg-icons"
 import { faWhatsapp } from "@fortawesome/free-brands-svg-icons"
 import { api } from "../lib/api"
@@ -89,6 +89,18 @@ export function Sidebar({ view, onNavigate, onCrumb }: Props) {
   async function addBranch(subjectId: number, title: string) {
     const b = await api.createBranch(subjectId, { kind: "assignment", title })
     setBranches(p => ({ ...p, [subjectId]: [...(p[subjectId] ?? []), b] }))
+  }
+
+  async function removeBranch(subjectId: number, branch: any) {
+    if (!confirm(`Delete "${branch.title}" and its milestones?\n\nAnything already anchored stays on BOT Chain — that record cannot be removed.`)) return
+    try {
+      await api.deleteBranch(branch.id)
+      setBranches(p => ({ ...p, [subjectId]: (p[subjectId] ?? []).filter((b: any) => b.id !== branch.id) }))
+      // Don't leave the user staring at a branch that no longer exists.
+      if (view.type === "branch" && view.branchId === branch.id) go({ type: "home" }, "Workspace")
+    } catch (e: any) {
+      alert(e.message)
+    }
   }
 
   const isActive = (v: View) => JSON.stringify(v) === JSON.stringify(view)
@@ -206,7 +218,8 @@ export function Sidebar({ view, onNavigate, onCrumb }: Props) {
                   {(branches[s.id] ?? []).map((b: any) => (
                     <Item key={b.id} label={b.title} icon={faFileLines}
                       active={isActive({ type: "branch", branchId: b.id, subjectId: s.id })}
-                      onClick={() => go({ type: "branch", branchId: b.id, subjectId: s.id }, `${s.name} / ${b.title}`)} />
+                      onClick={() => go({ type: "branch", branchId: b.id, subjectId: s.id }, `${s.name} / ${b.title}`)}
+                      onDelete={() => removeBranch(s.id, b)} />
                   ))}
                   <AddBranchInline onAdd={title => addBranch(s.id, title)} />
                 </div>
@@ -249,28 +262,41 @@ export function Sidebar({ view, onNavigate, onCrumb }: Props) {
   )
 }
 
-function Item({ label, icon, badge, active, onClick }: {
+function Item({ label, icon, badge, active, onClick, onDelete }: {
   label: string
   icon: typeof faPaperclip
   badge?: string
   active: boolean
   onClick: () => void
+  onDelete?: () => void
 }) {
   return (
-    <button onClick={onClick}
-      className="w-full flex items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs transition-all"
+    <div className="group relative flex items-center rounded-lg transition-all"
       style={{
         background: active ? "var(--accent-soft)" : "transparent",
-        color: active ? "var(--accent-bright)" : "var(--text-dim)",
         border: `1px solid ${active ? "var(--accent-border)" : "transparent"}`,
         boxShadow: active ? "0 0 14px var(--accent-soft)" : "none",
       }}
       onMouseEnter={e => { if (!active) e.currentTarget.style.background = "var(--surface-hover)" }}
       onMouseLeave={e => { if (!active) e.currentTarget.style.background = "transparent" }}>
-      <FontAwesomeIcon icon={icon} className="text-[10px] shrink-0 w-3" />
-      <span className="truncate flex-1">{label}</span>
-      {badge && active && <Pill tone="accent">{badge}</Pill>}
-    </button>
+      <button onClick={onClick}
+        className="flex-1 min-w-0 flex items-center gap-2 px-2.5 py-2 text-left text-xs"
+        style={{ color: active ? "var(--accent-bright)" : "var(--text-dim)" }}>
+        <FontAwesomeIcon icon={icon} className="text-[10px] shrink-0 w-3" />
+        <span className="truncate flex-1">{label}</span>
+        {badge && active && <Pill tone="accent">{badge}</Pill>}
+      </button>
+      {onDelete && (
+        <button onClick={e => { e.stopPropagation(); onDelete() }}
+          title="Delete assignment"
+          className="opacity-0 group-hover:opacity-100 transition-opacity px-2 py-2 shrink-0"
+          style={{ color: "var(--text-faint)" }}
+          onMouseEnter={e => (e.currentTarget.style.color = "var(--red)")}
+          onMouseLeave={e => (e.currentTarget.style.color = "var(--text-faint)")}>
+          <FontAwesomeIcon icon={faTrash} className="text-[10px]" />
+        </button>
+      )}
+    </div>
   )
 }
 

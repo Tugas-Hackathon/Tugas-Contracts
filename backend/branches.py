@@ -124,3 +124,17 @@ def rubric_check(branch_id: int, body: RubricBody, user: str = Depends(current_u
         return parse("rubric", prompt, RubricResult).model_dump()
     except LLMDeclined as e:
         raise HTTPException(502, str(e))
+
+
+@router.delete("/branches/{branch_id}", status_code=204)
+def delete_branch(branch_id: int, user: str = Depends(current_user)):
+    with get_db() as db:
+        owns = db.execute(
+            "SELECT id FROM branches WHERE id=? AND user_id=?", (branch_id, user)
+        ).fetchone()
+        if not owns:
+            raise HTTPException(404, "branch not found")
+        # Milestones reference the branch, so they go first. Anything already
+        # anchored stays on-chain — that record is not ours to remove.
+        db.execute("DELETE FROM milestones WHERE branch_id=? AND user_id=?", (branch_id, user))
+        db.execute("DELETE FROM branches WHERE id=? AND user_id=?", (branch_id, user))

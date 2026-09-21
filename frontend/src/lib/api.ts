@@ -74,6 +74,7 @@ export const api = {
   createBranch: (sid: number, data: { kind: string; title: string; due_at?: number }) =>
     req("POST", `/subjects/${sid}/branches`, data),
   branch: (id: number) => req("GET", `/branches/${id}`),
+  deleteBranch: (id: number) => req("DELETE", `/branches/${id}`),
   outline: (bid: number, brief: string) =>
     req("POST", `/branches/${bid}/outline`, { brief }),
   rubricCheck: (bid: number, draft: string) =>
