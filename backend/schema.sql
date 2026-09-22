@@ -137,3 +137,12 @@ CREATE TABLE IF NOT EXISTS wa_links (
     created_at INTEGER NOT NULL DEFAULT (unixepoch()),
     UNIQUE(user_id, subject_id)
 );
+
+CREATE TABLE IF NOT EXISTS quizzes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    branch_id INTEGER NOT NULL REFERENCES branches(id),
+    user_id TEXT NOT NULL REFERENCES users(address),
+    questions TEXT NOT NULL,
+    study_plan TEXT,
+    created_at INTEGER NOT NULL DEFAULT (unixepoch())
+);

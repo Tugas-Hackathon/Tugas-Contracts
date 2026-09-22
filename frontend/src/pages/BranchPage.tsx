@@ -5,11 +5,13 @@ import { api } from "../lib/api"
 import { MilestoneCard } from "../components/MilestoneCard"
 import { ChatBox } from "../components/ChatBox"
 import { Pill } from "../App"
+import { ExamTab } from "./ExamTab"
 
 export function BranchPage({ id }: { id: number; onBack?: () => void }) {
   const [branch, setBranch] = useState<any>(null)
   const [milestones, setMilestones] = useState<any[]>([])
   const [tab, setTab] = useState<"milestones" | "chat">("milestones")
+  const isExam = branch?.kind === "exam"
   const [milestoneTitle, setMilestoneTitle] = useState("")
   const [brief, setBrief] = useState("")
   const [planning, setPlanning] = useState(false)
@@ -52,7 +54,7 @@ export function BranchPage({ id }: { id: number; onBack?: () => void }) {
   }
 
   const tabs = [
-    { key: "milestones", label: "Milestones" },
+    { key: "milestones", label: isExam ? "Revise" : "Milestones" },
     { key: "chat", label: "Discussion" },
   ] as const
 
@@ -83,7 +85,9 @@ export function BranchPage({ id }: { id: number; onBack?: () => void }) {
         ))}
       </div>
 
-      {tab === "milestones" && (
+      {tab === "milestones" && isExam && <ExamTab id={id} />}
+
+      {tab === "milestones" && !isExam && (
         <div>
           {milestones.length === 0 ? (
             <div className="rounded-2xl p-7"

@@ -13,6 +13,7 @@ TASK_MODELS: dict[str, str] = {
     "ocr":     "google/gemini-flash-1.5",
     "extract": "google/gemini-flash-1.5",
     "plan":    "anthropic/claude-opus-5",
+    "quiz":    "anthropic/claude-opus-5",
 }
 
 _FIXTURES_DIR = Path(__file__).parent / "tests" / "fixtures" / "llm"

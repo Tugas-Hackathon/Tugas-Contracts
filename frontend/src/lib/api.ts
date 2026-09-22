@@ -93,6 +93,22 @@ export const api = {
   rubricCheck: (bid: number, draft: string) =>
     req("POST", `/branches/${bid}/rubric-check`, { draft }),
 
+  quiz: (bid: number) => req("GET", `/branches/${bid}/quiz`),
+  makeQuiz: (bid: number, paper: string) => req("POST", `/branches/${bid}/quiz`, { paper }),
+  makeQuizFile: async (bid: number, file: File) => {
+    const fd = new FormData()
+    fd.append("file", file)
+    const r = await fetch(`${BASE}/branches/${bid}/quiz-file`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token()}` },
+      body: fd,
+    })
+    if (!r.ok) throw new Error(await errorText(r))
+    return r.json()
+  },
+  submitQuiz: (bid: number, answers: number[]) =>
+    req("POST", `/branches/${bid}/quiz/attempt`, { answers }),
+
   milestones: (bid: number) => req("GET", `/branches/${bid}/milestones`),
   createMilestone: (bid: number, title: string) =>
     req("POST", `/branches/${bid}/milestones`, { title }),

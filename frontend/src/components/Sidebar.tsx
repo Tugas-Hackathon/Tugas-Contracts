@@ -86,8 +86,8 @@ export function Sidebar({ view, onNavigate, onCrumb }: Props) {
     }
   }
 
-  async function addBranch(subjectId: number, title: string) {
-    const b = await api.createBranch(subjectId, { kind: "assignment", title })
+  async function addBranch(subjectId: number, title: string, kind: string) {
+    const b = await api.createBranch(subjectId, { kind, title })
     setBranches(p => ({ ...p, [subjectId]: [...(p[subjectId] ?? []), b] }))
   }
 
@@ -221,7 +221,7 @@ export function Sidebar({ view, onNavigate, onCrumb }: Props) {
                       onClick={() => go({ type: "branch", branchId: b.id, subjectId: s.id }, `${s.name} / ${b.title}`)}
                       onDelete={() => removeBranch(s.id, b)} />
                   ))}
-                  <AddBranchInline onAdd={title => addBranch(s.id, title)} />
+                  <AddBranchInline onAdd={(title, kind) => addBranch(s.id, title, kind)} />
                 </div>
               )}
             </div>
@@ -300,13 +300,14 @@ function Item({ label, icon, badge, active, onClick, onDelete }: {
   )
 }
 
-function AddBranchInline({ onAdd }: { onAdd: (title: string) => Promise<void> }) {
+function AddBranchInline({ onAdd }: { onAdd: (title: string, kind: string) => Promise<void> }) {
   const [open, setOpen] = useState(false)
   const [title, setTitle] = useState("")
+  const [kind, setKind] = useState("assignment")
 
   async function submit() {
     if (!title.trim()) return
-    await onAdd(title.trim())
+    await onAdd(title.trim(), kind)
     setTitle("")
     setOpen(false)
   }
@@ -319,21 +320,36 @@ function AddBranchInline({ onAdd }: { onAdd: (title: string) => Promise<void> })
         onMouseEnter={e => (e.currentTarget.style.color = "var(--text-dim)")}
         onMouseLeave={e => (e.currentTarget.style.color = "var(--text-faint)")}>
         <FontAwesomeIcon icon={faPlus} className="text-[9px] w-3" />
-        <span>Add assignment</span>
+        <span>Add assignment or exam</span>
       </button>
     )
 
   return (
-    <div className="flex gap-1.5 pr-1">
-      <input autoFocus value={title} onChange={e => setTitle(e.target.value)}
-        onKeyDown={e => { if (e.key === "Enter") submit(); if (e.key === "Escape") setOpen(false) }}
-        placeholder="Assignment name…"
-        className="flex-1 text-xs rounded-lg px-2 py-1.5 outline-none"
-        style={{ background: "var(--input-bg)", color: "var(--text)", border: "1px solid var(--input-border)" }} />
-      <button onClick={submit} className="text-xs px-2 rounded-lg flex items-center text-white"
-        style={{ background: "var(--accent)" }}>
-        <FontAwesomeIcon icon={faCheck} className="text-[10px]" />
-      </button>
+    <div className="pr-1 space-y-1.5">
+      <div className="flex gap-1">
+        {["assignment", "exam"].map(k => (
+          <button key={k} onClick={() => setKind(k)}
+            className="flex-1 text-[10px] py-1 rounded-md capitalize transition-colors"
+            style={{
+              background: kind === k ? "var(--accent-soft)" : "var(--surface)",
+              border: `1px solid ${kind === k ? "var(--accent-border)" : "var(--surface-border)"}`,
+              color: kind === k ? "var(--accent-bright)" : "var(--text-faint)",
+            }}>
+            {k}
+          </button>
+        ))}
+      </div>
+      <div className="flex gap-1.5">
+        <input autoFocus value={title} onChange={e => setTitle(e.target.value)}
+          onKeyDown={e => { if (e.key === "Enter") submit(); if (e.key === "Escape") setOpen(false) }}
+          placeholder={kind === "exam" ? "Exam name…" : "Assignment name…"}
+          className="flex-1 min-w-0 text-xs rounded-lg px-2 py-1.5 outline-none"
+          style={{ background: "var(--input-bg)", color: "var(--text)", border: "1px solid var(--input-border)" }} />
+        <button onClick={submit} className="text-xs px-2 rounded-lg flex items-center text-white shrink-0"
+          style={{ background: "var(--accent)" }}>
+          <FontAwesomeIcon icon={faCheck} className="text-[10px]" />
+        </button>
+      </div>
     </div>
   )
 }
