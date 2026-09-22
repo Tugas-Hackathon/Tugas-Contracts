@@ -93,11 +93,6 @@ export const api = {
   rubricCheck: (bid: number, draft: string) =>
     req("POST", `/branches/${bid}/rubric-check`, { draft }),
 
-  googleStatus: () => req("GET", "/google/status"),
-  googleStart: () => req("GET", "/auth/google/start"),
-  googleDisconnect: () => req("DELETE", "/google"),
-  pushToGoogle: (ident: string) => req("POST", `/agenda/${ident}/push`),
-
   settings: () => req("GET", "/settings"),
   setOpenrouterKey: (key: string) => req("PUT", "/settings/openrouter", { key }),
   clearOpenrouterKey: () => req("DELETE", "/settings/openrouter"),

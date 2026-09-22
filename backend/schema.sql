@@ -147,8 +147,3 @@ CREATE TABLE IF NOT EXISTS quizzes (
     created_at INTEGER NOT NULL DEFAULT (unixepoch())
 );
 
-CREATE TABLE IF NOT EXISTS oauth_states (
-    state TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL REFERENCES users(address),
-    expires_at INTEGER NOT NULL
-);

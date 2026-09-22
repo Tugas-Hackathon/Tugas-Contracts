@@ -16,7 +16,6 @@ from intake import router as intake_router
 from quiz import router as quiz_router
 from agenda import router as agenda_router
 from settings import router as settings_router
-from gcal import router as gcal_router
 
 app = FastAPI(title="Tugas API")
 
@@ -39,7 +38,6 @@ app.include_router(intake_router)
 app.include_router(quiz_router)
 app.include_router(agenda_router)
 app.include_router(settings_router)
-app.include_router(gcal_router)
 
 @app.on_event("startup")
 def startup():
