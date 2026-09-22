@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import {
   faChevronDown, faChevronRight, faPlus, faCheck,
   faPaperclip, faRobot, faFileLines, faSun, faMoon,
-  faMagnifyingGlass, faXmark, faTrash,
+  faMagnifyingGlass, faXmark, faTrash, faCalendarDays,
 } from "@fortawesome/free-solid-svg-icons"
 import { faWhatsapp } from "@fortawesome/free-brands-svg-icons"
 import { api } from "../lib/api"
@@ -236,6 +236,16 @@ export function Sidebar({ view, onNavigate, onCrumb }: Props) {
 
       {/* Footer */}
       <div className="px-3 py-3 space-y-2" style={{ borderTop: "1px solid var(--panel-border)" }}>
+        <button onClick={() => go({ type: "calendar" }, "Calendar")}
+          className="w-full flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs transition-colors"
+          style={{
+            background: isActive({ type: "calendar" }) ? "var(--accent-soft)" : "var(--surface)",
+            border: `1px solid ${isActive({ type: "calendar" }) ? "var(--accent-border)" : "var(--surface-border)"}`,
+            color: isActive({ type: "calendar" }) ? "var(--accent-bright)" : "var(--text-dim)",
+          }}>
+          <FontAwesomeIcon icon={faCalendarDays} className="text-[11px]" style={{ color: "var(--accent-bright)" }} />
+          <span className="flex-1 text-left">Calendar</span>
+        </button>
         <button onClick={() => go({ type: "whatsapp" }, "WhatsApp")}
           className="w-full flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs transition-colors"
           style={{

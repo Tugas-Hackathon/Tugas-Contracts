@@ -14,6 +14,7 @@ from milestones import router as milestones_router
 from whatsapp import router as whatsapp_router
 from intake import router as intake_router
 from quiz import router as quiz_router
+from agenda import router as agenda_router
 
 app = FastAPI(title="Tugas API")
 
@@ -34,6 +35,7 @@ app.include_router(milestones_router)
 app.include_router(whatsapp_router)
 app.include_router(intake_router)
 app.include_router(quiz_router)
+app.include_router(agenda_router)
 
 @app.on_event("startup")
 def startup():

@@ -93,6 +93,23 @@ export const api = {
   rubricCheck: (bid: number, draft: string) =>
     req("POST", `/branches/${bid}/rubric-check`, { draft }),
 
+  agenda: () => req("GET", "/agenda"),
+  createEvent: (body: { title: string; starts_at: number; ends_at?: number | null; kind?: string }) =>
+    req("POST", "/events", body),
+  deleteEvent: (id: number) => req("DELETE", `/events/${id}`),
+  setBranchDue: (bid: number, due_at: number | null) =>
+    req("PUT", `/branches/${bid}/due`, { due_at }),
+  downloadIcs: async (ident: string) => {
+    const r = await fetch(`${BASE}/agenda/${ident}.ics`, {
+      headers: { Authorization: `Bearer ${token()}` },
+    })
+    if (!r.ok) throw new Error(await errorText(r))
+    const url = URL.createObjectURL(await r.blob())
+    const a = document.createElement("a")
+    a.href = url; a.download = `${ident}.ics`; a.click()
+    URL.revokeObjectURL(url)
+  },
+
   quiz: (bid: number) => req("GET", `/branches/${bid}/quiz`),
   makeQuiz: (bid: number, paper: string) => req("POST", `/branches/${bid}/quiz`, { paper }),
   makeQuizFile: async (bid: number, file: File) => {

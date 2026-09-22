@@ -11,6 +11,7 @@ import { ConnectButton } from "./components/ConnectButton"
 import { ChatBox } from "./components/ChatBox"
 import { BranchPage } from "./pages/BranchPage"
 import { WhatsAppPage } from "./pages/WhatsAppPage"
+import { CalendarPage } from "./pages/CalendarPage"
 import { api } from "./lib/api"
 
 export type View =
@@ -19,6 +20,7 @@ export type View =
   | { type: "tutor"; subjectId: number }
   | { type: "branch"; branchId: number; subjectId: number }
   | { type: "whatsapp" }
+  | { type: "calendar" }
 
 export default function App() {
   const { authed } = useAuth()
@@ -162,6 +164,7 @@ function MainContent({ view, onNavigate }: { view: View; onNavigate: (v: View) =
   if (view.type === "tutor") return <TutorView subjectId={view.subjectId} />
   if (view.type === "branch") return <BranchPage id={view.branchId} />
   if (view.type === "whatsapp") return <WhatsAppPage />
+  if (view.type === "calendar") return <CalendarPage />
   return null
 }
 
