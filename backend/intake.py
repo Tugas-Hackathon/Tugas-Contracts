@@ -28,7 +28,7 @@ class Batch(BaseModel):
     items: list[Extracted]
 
 
-def _classify(subject_name: str, lines: list[str]) -> list[Extracted]:
+def _classify(subject_name: str, lines: list[str], user: str) -> list[Extracted]:
     numbered = "\n".join(f"{i+1}. {t}" for i, t in enumerate(lines))
     prompt = (
         f"These are WhatsApp messages from the class group for the subject "
@@ -45,7 +45,7 @@ def _classify(subject_name: str, lines: list[str]) -> list[Extracted]:
         "Keep title short and factual. Do not invent detail that is not present.\n\n"
         f"MESSAGES:\n{numbered}"
     )
-    return parse("extract", prompt, Batch).items
+    return parse("extract", prompt, Batch, user=user).items
 
 
 def _write_context(user: str, subject_id: int, subject_name: str) -> str:
@@ -125,7 +125,7 @@ def sync(user: str = Depends(current_user)):
             continue
 
         try:
-            items = _classify(link["subject_name"], [m["body"] for m in new])
+            items = _classify(link["subject_name"], [m["body"] for m in new], user)
         except LLMDeclined as e:
             raise HTTPException(502, f"AI could not classify messages: {e}")
 

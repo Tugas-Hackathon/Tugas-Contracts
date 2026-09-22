@@ -87,7 +87,7 @@ def ask(subject_id: int, body: AskBody, user: str = Depends(current_user)):
     )
 
     try:
-        result = parse("tutor", prompt, TutorResponse)
+        result = parse("tutor", prompt, TutorResponse, user=user)
     except LLMDeclined as e:
         raise HTTPException(502, str(e))
 

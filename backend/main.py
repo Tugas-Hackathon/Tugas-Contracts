@@ -15,6 +15,7 @@ from whatsapp import router as whatsapp_router
 from intake import router as intake_router
 from quiz import router as quiz_router
 from agenda import router as agenda_router
+from settings import router as settings_router
 
 app = FastAPI(title="Tugas API")
 
@@ -36,10 +37,22 @@ app.include_router(whatsapp_router)
 app.include_router(intake_router)
 app.include_router(quiz_router)
 app.include_router(agenda_router)
+app.include_router(settings_router)
 
 @app.on_event("startup")
 def startup():
     init_db()
+
+from fastapi import Request
+from fastapi.responses import JSONResponse
+from llm import NoAPIKey
+
+
+@app.exception_handler(NoAPIKey)
+def _no_key(request: Request, exc: NoAPIKey):
+    # 402: the request was fine, it just cannot be paid for yet.
+    return JSONResponse(status_code=402, content={"detail": str(exc)})
+
 
 @app.get("/health")
 def health():

@@ -21,6 +21,7 @@ def _connect() -> sqlite3.Connection:
 _MIGRATIONS = [
     ("messages", "wa_msg_id", "TEXT"),
     ("messages", "sender_name", "TEXT"),
+    ("users", "openrouter_key", "TEXT"),
 ]
 
 

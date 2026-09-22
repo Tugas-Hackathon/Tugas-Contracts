@@ -63,7 +63,7 @@ def _build(branch_id: int, source: str, user: str):
     )
 
     try:
-        result = parse("quiz", prompt, ExamPrep)
+        result = parse("quiz", prompt, ExamPrep, user=user)
     except LLMDeclined as e:
         raise HTTPException(502, f"Could not build a quiz from that: {e}")
 

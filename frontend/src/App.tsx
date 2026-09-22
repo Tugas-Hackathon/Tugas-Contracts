@@ -12,6 +12,7 @@ import { ChatBox } from "./components/ChatBox"
 import { BranchPage } from "./pages/BranchPage"
 import { WhatsAppPage } from "./pages/WhatsAppPage"
 import { CalendarPage } from "./pages/CalendarPage"
+import { SettingsPage } from "./pages/SettingsPage"
 import { api } from "./lib/api"
 
 export type View =
@@ -21,6 +22,7 @@ export type View =
   | { type: "branch"; branchId: number; subjectId: number }
   | { type: "whatsapp" }
   | { type: "calendar" }
+  | { type: "settings" }
 
 export default function App() {
   const { authed } = useAuth()
@@ -63,7 +65,7 @@ export default function App() {
       <Sidebar view={view} onNavigate={setView} onCrumb={setCrumb} />
       <main className="relative flex-1 flex flex-col rounded-2xl overflow-hidden backdrop-blur-xl"
         style={{ background: "var(--panel)", border: "1px solid var(--panel-border)" }}>
-        <TopBar crumb={crumb} />
+        <TopBar crumb={crumb} onSettings={() => { setView({ type: "settings" }); setCrumb("Settings") }} />
         <div className="flex-1 overflow-y-auto">
           <MainContent view={view} onNavigate={setView} />
         </div>
@@ -86,7 +88,7 @@ function Glows() {
   )
 }
 
-function TopBar({ crumb }: { crumb: string }) {
+function TopBar({ crumb, onSettings }: { crumb: string; onSettings: () => void }) {
   return (
     <header className="shrink-0 flex items-center gap-4 px-5 h-[68px]"
       style={{ borderBottom: "1px solid var(--panel-border)" }}>
@@ -100,15 +102,15 @@ function TopBar({ crumb }: { crumb: string }) {
 
       <div className="flex items-center gap-2">
         <IconBtn icon={faBell} />
-        <IconBtn icon={faSliders} active />
+        <IconBtn icon={faSliders} onClick={onSettings} />
       </div>
     </header>
   )
 }
 
-function IconBtn({ icon, active = false }: { icon: typeof faBell; active?: boolean }) {
+function IconBtn({ icon, active = false, onClick }: { icon: typeof faBell; active?: boolean; onClick?: () => void }) {
   return (
-    <button className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors"
+    <button onClick={onClick} className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors"
       style={{
         background: active ? "var(--accent-soft)" : "var(--surface)",
         border: `1px solid ${active ? "var(--accent-border)" : "var(--surface-border)"}`,
@@ -165,6 +167,7 @@ function MainContent({ view, onNavigate }: { view: View; onNavigate: (v: View) =
   if (view.type === "branch") return <BranchPage id={view.branchId} />
   if (view.type === "whatsapp") return <WhatsAppPage />
   if (view.type === "calendar") return <CalendarPage />
+  if (view.type === "settings") return <SettingsPage />
   return null
 }
 

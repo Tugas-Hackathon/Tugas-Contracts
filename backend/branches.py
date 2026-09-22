@@ -109,7 +109,7 @@ def outline(branch_id: int, body: OutlineBody, user: str = Depends(current_user)
         "Generate a structured outline with sections and key points."
     )
     try:
-        return parse("outline", prompt, OutlineResult).model_dump()
+        return parse("outline", prompt, OutlineResult, user=user).model_dump()
     except LLMDeclined as e:
         raise HTTPException(502, str(e))
 
@@ -127,7 +127,7 @@ def rubric_check(branch_id: int, body: RubricBody, user: str = Depends(current_u
         "For each criterion state if met, provide evidence, and a suggestion if not met."
     )
     try:
-        return parse("rubric", prompt, RubricResult).model_dump()
+        return parse("rubric", prompt, RubricResult, user=user).model_dump()
     except LLMDeclined as e:
         raise HTTPException(502, str(e))
 
@@ -226,7 +226,7 @@ def _plan(branch_id: int, brief: str, user: str):
     )
 
     try:
-        result = parse("plan", prompt, PlanResult)
+        result = parse("plan", prompt, PlanResult, user=user)
     except LLMDeclined as e:
         raise HTTPException(502, f"Could not plan this assignment: {e}")
 

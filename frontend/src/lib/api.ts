@@ -93,6 +93,10 @@ export const api = {
   rubricCheck: (bid: number, draft: string) =>
     req("POST", `/branches/${bid}/rubric-check`, { draft }),
 
+  settings: () => req("GET", "/settings"),
+  setOpenrouterKey: (key: string) => req("PUT", "/settings/openrouter", { key }),
+  clearOpenrouterKey: () => req("DELETE", "/settings/openrouter"),
+
   agenda: () => req("GET", "/agenda"),
   createEvent: (body: { title: string; starts_at: number; ends_at?: number | null; kind?: string }) =>
     req("POST", "/events", body),
