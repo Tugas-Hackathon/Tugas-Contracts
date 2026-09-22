@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import {
   faKey, faCheck, faTrash, faUpRightFromSquare, faTriangleExclamation,
 } from "@fortawesome/free-solid-svg-icons"
+import { faGoogle } from "@fortawesome/free-brands-svg-icons"
 import { api } from "../lib/api"
 import { Pill } from "../App"
 
@@ -126,6 +127,96 @@ export function SettingsPage() {
         shown again after saving — only the last four characters, so you can tell which key is
         connected.
       </p>
+
+      <GoogleCard />
+    </div>
+  )
+}
+
+function GoogleCard() {
+  const [g, setG] = useState<any>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState("")
+
+  useEffect(() => { load() }, [])
+
+  async function load() {
+    try { setG(await api.googleStatus()) }
+    catch (e: any) { setError(e.message) }
+  }
+
+  async function connect() {
+    setBusy(true); setError("")
+    try {
+      const { url } = await api.googleStart()
+      window.location.href = url
+    } catch (e: any) { setError(e.message); setBusy(false) }
+  }
+
+  async function disconnect() {
+    if (!confirm("Disconnect Google Calendar?")) return
+    try { await api.googleDisconnect(); await load() }
+    catch (e: any) { setError(e.message) }
+  }
+
+  if (!g) return null
+
+  return (
+    <div className="rounded-2xl p-6 mt-6"
+      style={{ background: "var(--surface)", border: "1px solid var(--surface-border)" }}>
+      <div className="flex items-center gap-2 mb-2">
+        <FontAwesomeIcon icon={faGoogle} className="text-xs" style={{ color: "var(--teal)" }} />
+        <h3 className="text-sm font-semibold" style={{ color: "var(--text)" }}>Google Calendar</h3>
+        {!g.configured ? <Pill tone="dim">not available</Pill>
+          : g.reconnect_needed ? <Pill tone="accent">reconnect needed</Pill>
+          : g.connected ? <Pill tone="teal">{g.email ?? "connected"}</Pill>
+          : <Pill tone="dim">not connected</Pill>}
+      </div>
+
+      {!g.configured ? (
+        <p className="text-xs leading-relaxed" style={{ color: "var(--text-dim)" }}>
+          Calendar sync isn't set up on this server. You can still add any deadline to Google
+          Calendar with one click from the Calendar page — that needs no setup at all.
+        </p>
+      ) : (
+        <>
+          <p className="text-xs mb-5 leading-relaxed" style={{ color: "var(--text-dim)" }}>
+            {g.connected
+              ? "Deadlines can be pushed straight into your own Google Calendar from the Calendar page."
+              : "Connect your own Google account to push deadlines into your calendar. Tugas can only add events — it never reads anything else."}
+          </p>
+
+          {g.reconnect_needed && (
+            <div className="flex items-start gap-2.5 rounded-xl px-4 py-3 mb-4"
+              style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.3)" }}>
+              <FontAwesomeIcon icon={faTriangleExclamation} className="text-xs mt-0.5 shrink-0"
+                style={{ color: "var(--amber)" }} />
+              <span className="text-xs" style={{ color: "var(--amber)" }}>
+                Your Google session expired. Connect again to resume syncing.
+              </span>
+            </div>
+          )}
+
+          {g.connected && !g.reconnect_needed ? (
+            <button onClick={disconnect} className="text-xs hover:underline flex items-center gap-1.5"
+              style={{ color: "var(--text-faint)" }}
+              onMouseEnter={e => (e.currentTarget.style.color = "var(--red)")}
+              onMouseLeave={e => (e.currentTarget.style.color = "var(--text-faint)")}>
+              <FontAwesomeIcon icon={faTrash} className="text-[9px]" />
+              Disconnect
+            </button>
+          ) : (
+            <button onClick={connect} disabled={busy}
+              className="px-5 py-2.5 rounded-xl text-sm font-medium text-white disabled:opacity-50 transition-all"
+              style={{ background: "linear-gradient(135deg,#2dd4bf,#0d9488)", boxShadow: "0 0 18px rgba(45,212,191,0.3)" }}>
+              <FontAwesomeIcon icon={faGoogle} className="text-xs mr-2" />
+              {busy ? "Opening Google…" : g.reconnect_needed ? "Reconnect Google" : "Connect Google Calendar"}
+            </button>
+          )}
+        </>
+      )}
+
+      {error && <p className="text-xs mt-3" style={{ color: "var(--red)" }}>{error}</p>}
     </div>
   )
 }
