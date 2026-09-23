@@ -6,6 +6,7 @@ from typing import Optional
 from eth_utils import keccak
 from db import get_db
 from auth import current_user
+from llm import parse, LLMDeclined
 
 router = APIRouter()
 
@@ -152,3 +153,60 @@ def anchored(milestone_id: int, body: AnchoredBody, user: str = Depends(current_
         )
 
     return {"chain_commit_id": chain_commit_id, "tx_hash": body.tx_hash}
+
+
+class PolishBody(BaseModel):
+    draft: str
+    instruction: Optional[str] = None      # "more academic", "shorter", …
+
+
+class PolishResult(BaseModel):
+    polished: str
+    changes: list[str]                     # what was improved, for the student to see
+    added_nothing: bool                    # the model's own attestation
+
+
+@router.post("/milestones/{milestone_id}/polish")
+def polish(milestone_id: int, body: PolishBody, user: str = Depends(current_user)):
+    """Improve how the student said it. Never change what they said."""
+    if not body.draft.strip():
+        raise HTTPException(422, "write your rough notes first")
+
+    with get_db() as db:
+        ms = db.execute(
+            "SELECT m.title, b.title AS branch_title FROM milestones m "
+            "JOIN branches b ON b.id = m.branch_id WHERE m.id=? AND m.user_id=?",
+            (milestone_id, user),
+        ).fetchone()
+    if not ms:
+        raise HTTPException(404, "milestone not found")
+
+    extra = f"\n\nThe student also asks: {body.instruction}" if body.instruction else ""
+
+    prompt = (
+        "A student has written rough notes for a piece of coursework. Rewrite them so they read "
+        "as clear, well-structured academic prose.\n\n"
+        "ABSOLUTE CONSTRAINT — the ideas must stay entirely the student's:\n"
+        "- Do NOT add facts, examples, statistics, citations or arguments that are not already "
+        "in their notes. Not one.\n"
+        "- Do NOT extend their reasoning or draw conclusions they did not draw.\n"
+        "- If they made three points, the result has three points. Never four.\n"
+        "- If a point is thin, leave it thin. Do not pad it out with invented substance.\n\n"
+        "What you MAY do: fix grammar and spelling, turn fragments into sentences, order their "
+        "points logically, improve transitions, replace casual phrasing with academic register, "
+        "remove repetition.\n\n"
+        "You are a copy editor, not a co-author.\n\n"
+        f"ASSIGNMENT: {ms['branch_title']}\n"
+        f"SECTION: {ms['title']}{extra}\n\n"
+        f"THE STUDENT'S NOTES:\n{body.draft}\n\n"
+        "changes: list what you improved, phrased for the student — 'joined your second and "
+        "third points into one paragraph', not 'improved flow'.\n"
+        "added_nothing: true only if you introduced no new content whatsoever."
+    )
+
+    try:
+        result = parse("polish", prompt, PolishResult, user=user)
+    except LLMDeclined as e:
+        raise HTTPException(502, f"Could not rewrite that: {e}")
+
+    return result.model_dump()

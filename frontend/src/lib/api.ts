@@ -140,6 +140,8 @@ export const api = {
     rubric: string,
     ai_assist_level: number,
   ) => req("POST", `/milestones/${mid}/hash`, { draft, brief, rubric, ai_assist_level }),
+  polishMilestone: (mid: number, draft: string, instruction?: string) =>
+    req("POST", `/milestones/${mid}/polish`, { draft, instruction }),
   anchored: (mid: number, tx_hash: string) =>
     req("POST", `/milestones/${mid}/anchored`, { tx_hash }),
 
