@@ -1,9 +1,10 @@
 import os, uuid, mimetypes
 from pathlib import Path
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
-from fastapi.responses import FileResponse
+from fastapi.responses import Response
 from db import get_db
 from auth import current_user
+import storage
 
 router = APIRouter()
 
@@ -74,19 +75,24 @@ async def upload_material(
     if len(data) > MAX_BYTES:
         raise HTTPException(422, "file too large (max 25 MB)")
 
-    dest_dir = DATA_DIR / "files" / user / str(subject_id)
-    dest_dir.mkdir(parents=True, exist_ok=True)
-    dest = dest_dir / f"{uuid.uuid4()}{ext}"
-    dest.write_bytes(data)
-
+    # Extraction reads from a path, so stage locally first and only keep the
+    # file once we know it has usable text.
+    import tempfile
+    with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
+        tmp.write(data)
+        staged = Path(tmp.name)
     try:
-        text, pages = _extract_text(dest, ext)
+        text, pages = _extract_text(staged, ext)
     except Exception:
         text, pages = "", 0
+    finally:
+        staged.unlink(missing_ok=True)
 
     if not text.strip():
-        dest.unlink(missing_ok=True)
         raise HTTPException(422, "could not extract any text from this file")
+
+    ref = storage.put(f"{user}/{subject_id}/{uuid.uuid4()}{ext}", data,
+                      file.content_type or "application/octet-stream")
 
     mime = file.content_type or mimetypes.guess_type(file.filename or "")[0] or "application/octet-stream"
 
@@ -94,7 +100,7 @@ async def upload_material(
         cur = db.execute(
             "INSERT INTO materials(subject_id,user_id,filename,filepath,mime,text,page_count) "
             "VALUES(?,?,?,?,?,?,?) RETURNING id,filename,mime,page_count,created_at",
-            (subject_id, user, file.filename, str(dest), mime, text, pages),
+            (subject_id, user, file.filename, ref, mime, text, pages),
         )
         mat = cur.fetchone()
 
@@ -132,10 +138,15 @@ def download_material(material_id: int, user: str = Depends(current_user)):
         ).fetchone()
     if not row:
         raise HTTPException(404, "material not found")
-    path = Path(row["filepath"])
-    if not path.exists():
-        raise HTTPException(404, "file missing on disk")
-    return FileResponse(path, media_type=row["mime"], filename=row["filename"])
+    try:
+        data = storage.get(row["filepath"])
+    except FileNotFoundError:
+        raise HTTPException(404, "file no longer in storage")
+    return Response(
+        content=data,
+        media_type=row["mime"],
+        headers={"Content-Disposition": f'attachment; filename="{row["filename"]}"'},
+    )
 
 
 @router.delete("/materials/{material_id}", status_code=204)
@@ -148,4 +159,4 @@ def delete_material(material_id: int, user: str = Depends(current_user)):
         if not row:
             raise HTTPException(404, "material not found")
         db.execute("DELETE FROM materials WHERE id=?", (material_id,))
-    Path(row["filepath"]).unlink(missing_ok=True)
+    storage.delete(row["filepath"])
