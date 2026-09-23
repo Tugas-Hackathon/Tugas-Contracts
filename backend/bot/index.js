@@ -6,6 +6,9 @@ const { Client, LocalAuth } = pkg
 
 const PORT = Number(process.env.BOT_PORT ?? 8787)
 const TOKEN = process.env.BOT_TOKEN ?? ""
+// On a container this must point at the mounted volume, or every deploy
+// silently discards the sessions and students re-scan the QR.
+const SESSION_DIR = process.env.WA_SESSION_DIR ?? "./.wwebjs_auth"
 
 if (!TOKEN) {
   console.error("BOT_TOKEN is not set. Refusing to start — an unauthenticated bot exposes every linked WhatsApp account.")
@@ -29,7 +32,7 @@ function start(user) {
   if (s.client) return s
 
   const client = new Client({
-    authStrategy: new LocalAuth({ clientId: user, dataPath: "./.wwebjs_auth" }),
+    authStrategy: new LocalAuth({ clientId: user, dataPath: SESSION_DIR }),
     puppeteer: { args: ["--no-sandbox", "--disable-setuid-sandbox"] },
   })
 
